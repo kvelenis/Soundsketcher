@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload WAV File</title>
+    <script src="https://cdn.jsdelivr.net/npm/svg-drag-select@0.4.2"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.2/Draggable.min.js"></script>
+    
+    
+<script>/* `window.svgDragSelect` function is available */</script>
+
+    <script>/* `window.svgDragSelect` function is available */</script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        * {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #drop_area {
+            width: 400px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            text-align: center;
+            line-height: 200px;
+            cursor: pointer;
+            margin: 20px auto;
+            font-size: 0.8em;
+        }
+        .audio-player__container {
+            margin: auto;
+            display: flex;
+        }
+        #audioPlayer {
+            margin: 20px auto;
+        }
+
+        .path-animation-1 {
+        stroke-dasharray: 5;
+        animation: dash-1 100s linear infinite;
+        }
+
+        .path-animation-2 {
+        stroke-dasharray: 2;
+        animation: dash-2 80s ease-in-out infinite;
+        }
+
+        .path-animation-3 {
+        stroke-dasharray: 13;
+        animation: dash-3 60s ease infinite;
+        }
+
+        .selections__container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .selection__container {
+            display: flex;
+            justify-content: center;
+        }
+
+        .selection__container__noise-threshold {
+            border: 1px solid black;
+            flex-direction: column;
+            width: 300px;
+            margin: auto;
+        }
+
+        #submitButton {
+            display: flex;
+            width:100px;
+            margin-top: 10px;
+        }
+
+        .svg-characteristic {
+            width:100px;
+            margin-left: 10px;
+        }
+
+        @keyframes dash-1 {
+        to {
+            stroke-dashoffset: 1000;
+        }
+        }
+
+        @keyframes dash-2 {
+        to {
+            stroke-dashoffset: 1500;
+        }
+        }
+        @keyframes dash-3 {
+        to {
+            stroke-dashoffset: 800;
+        }
+        }
+
+
+        /* please setup drag area overlay styles. for example: */
+        .svg-drag-select-area-overlay {
+        border: 1px dotted gray;
+        background-color: rgba(255,255,255,.4);
+        }
+        /* CSS to change the fill color of all selected SVG elements */
+        [data-selected] {
+        fill: yellow; /* Change this to your desired color */
+        stroke: blue; /* Change this to your desired color */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="drop_area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+        Drag & Drop WAV file here or click to upload
+    </div>
+    
+
+
+
+    <script>
+        
+        // Get reference to the drop area
+        const dropArea = document.getElementById('drop_area');
+
+        // Event listener for file dragging over the drop area
+        function handleDragEnter(event) {
+            // Prevent default behavior to allow drop
+            event.preventDefault();
+
+            // Apply solid border style when a file is being dragged over the drop area
+            dropArea.style.borderStyle = 'solid';
+        }
+
+        // Event listener for file leaving the drop area
+        function handleDragLeave(event) {
+            // Remove border style when a file leaves the drop area
+            dropArea.style.borderStyle = '';
+        }
+
+
+
+    </script>
+
+
+    <div class="selections__container">
+        <div class="selection__container">
+            <select id="featureSelect-1" class="featureSelect">
+                <option value="spectral_centroid">Spectral Centroid</option>
+                <option value="spectral_flux">Spectral Flux</option>
+                <option value="spectral_deviation">Spectral Standard Deviation</option>
+                <option value="zerocrossingrate">Zero Crossing Rate</option>
+                <option value="amplitude" selected>Amplitude</option>
+                <option value="yin_f0">Yin F0</option>
+                <option value="none">None</option>
+                <!-- Add more options for other features if needed -->
+            </select>
+              
+            <div class="svg-characteristic">
+                Line Length
+            </div>
+        </div>
+        <div class="selection__container">
+            <select id="featureSelect-2" class="featureSelect">
+                <option value="spectral_centroid">Spectral Centroid</option>
+                <option value="spectral_flux">Spectral Flux</option>
+                <option value="spectral_deviation">Spectral Standard Deviation</option>
+                <option value="zerocrossingrate">Zero Crossing Rate</option>
+                <option value="amplitude" selected>Amplitude</option>
+                <option value="yin_f0">Yin F0</option>
+                <option value="none">None</option>
+                <!-- Add more options for other features if needed -->
+            </select>
+            
+            <div class="svg-characteristic">
+                Line Width
+            </div>
+        </div>
+        <div class="selection__container">
+            <select id="featureSelect-3" class="featureSelect">
+                <option value="spectral_centroid">Spectral Centroid</option>
+                <option value="spectral_flux">Spectral Flux</option>
+                <option value="spectral_deviation">Spectral Standard Deviation</option>
+                <option value="zerocrossingrate">Zero Crossing Rate</option>
+                <option value="amplitude" selected>Amplitude</option>
+                <option value="yin_f0">Yin F0</option>
+                <option value="none">None</option>
+                <!-- Add more options for other features if needed -->
+            </select>
+            
+            <div class="svg-characteristic">
+                Color
+            </div>
+        </div>
+        <div class="selection__container">
+            <select id="featureSelect-4" class="featureSelect">
+                <option value="spectral_centroid">Spectral Centroid</option>
+                <option value="spectral_flux">Spectral Flux</option>
+                <option value="spectral_deviation">Spectral Standard Deviation</option>
+                <option value="zerocrossingrate" selected>Zero Crossing Rate</option>
+                <option value="amplitude">Amplitude</option>
+                <option value="yin_f0">Yin F0</option>
+                <option value="none">None</option>
+                <!-- Add more options for other features if needed -->
+            </select>
+            <div class="svg-characteristic">
+                Angle
+            </div>
+            
+        </div>
+        <div class="selection__container">
+            <select id="featureSelect-5" class="featureSelect">
+                <option value="spectral_centroid" selected>Spectral Centroid</option>
+                <option value="spectral_flux">Spectral Flux</option>
+                <option value="spectral_deviation">Spectral Standard Deviation</option>
+                <option value="zerocrossingrate">Zero Crossing Rate</option>
+                <option value="amplitude">Amplitude</option>
+                <option value="yin_f0">Yin F0</option>
+                <option value="normalized_height">(Spectral Centroid - Deviation)/2</option>
+                <option value="none">None</option>
+                <!-- Add more options for other features if needed -->
+            </select>
+            <div class="svg-characteristic">
+                Y Axis
+            </div>
+            
+        </div>
+        <div class="selection__container">
+            <button id="changeNamesButton">Change Option Names</button>
+        </div>
+        <div class="selection__container selection__container__noise-threshold">
+            <label for="thresholdToggle">Draw Lines Above Noise Threshold:</label>
+            <input type="checkbox" id="thresholdToggle">
+            <label for="thresholdSlider">Zero Crossing Rate Threshold:</label>
+            <input type="range" id="thresholdSlider" min="0" max="45" step="1" value="40">    
+        </div>
+        <div class="selection__container selection__container__circle">
+            <label for="thresholdCircle">Draw Circles on Line Centers:</label>
+            <input type="checkbox" id="thresholdCircle">   
+        </div>
+                
+        <div class="selection__container">
+            <!-- Submit button -->
+            <button id="submitButton">Submit</button>
+        </div>
+        <button id="joinButton">Join Selected Paths</button>
+
+        <div class="audio-player__container">
+            <audio id="audioPlayer" controls></audio>
+        </div>
+        
+    </div>
+    <div id="visualization"></div>
+    <script>
+
+        let isOriginal = true;
+        
+        const originalNames = {
+            'spectral_centroid': 'Spectral Centroid',
+            'spectral_flux': 'Spectral Flux',
+            'spectral_deviation': 'Spectral Standard Deviation',
+            'zerocrossingrate': 'Zero Crossing Rate',
+            'amplitude': 'Amplitude',
+            'yin_f0': 'Yin F0',
+            "normalized_height": '(Spectral Centroid - Deviation)/2', 
+            'none': 'None'
+        };
+
+        const newNames = {
+            'spectral_centroid': 'Center of Spectrum',
+            'spectral_flux': 'Change in Spectrum',
+            'spectral_deviation': 'Spectrum Variability',
+            'zerocrossingrate': 'Noisiness',
+            'amplitude': 'Volume Level',
+            'yin_f0': 'Pitch Estimation (Yin)',
+            "normalized_height": 'Normalized Spectral height',
+            'none': 'No Feature'
+        };
+
+        document.getElementById('changeNamesButton').addEventListener('click', function() {
+            var selects = document.querySelectorAll('.featureSelect');
+            var names = isOriginal ? newNames : originalNames;
+
+            // Loop through each select element
+            selects.forEach(function(select) {
+                var options = select.options;
+                // Loop through options and change the names
+                for (var i = 0; i < options.length; i++) {
+                    var option = options[i];
+                    if (names[option.value]) {
+                        option.text = names[option.value];
+                    }
+                }
+            });
+
+            // Toggle the state
+            isOriginal = !isOriginal;
+        });
+
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        let audioDuration = 0;
+
+
+
+        let globalAudioData; // Declare a global variable to store the JSON data
+        let globalFile; // Declare a global variable to store the audio file
+        // JavaScript
+        // Get references to the dropdown menus
+        const featureSelect1 = document.getElementById('featureSelect-1');
+        const featureSelect2 = document.getElementById('featureSelect-2');
+        const featureSelect3 = document.getElementById('featureSelect-3');
+        const featureSelect4 = document.getElementById('featureSelect-4');
+        const featureSelect5 = document.getElementById('featureSelect-5');
+        const thresholdToggle = document.getElementById("thresholdToggle");
+        const thresholdSlider = document.getElementById("thresholdSlider"); 
+        const thresholdCircle = document.getElementById("thresholdCircle"); 
+        // Get reference to the submit button
+        const submitButton = document.getElementById('submitButton');
+
+        // Event listener for the submit button
+        submitButton.addEventListener('click', function() {
+            // Call a function or perform actions when the submit button is clicked
+            drawVisualization(globalAudioData);
+            handleAudioPlayback(globalFile);
+        });
+
+
+
+        var canvasWidth = 2000;
+        function map(value, start1, stop1, start2, stop2) {
+            return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+        }
+
+        // Function to generate a random value of -1 or 1
+        function getRandomSign() {
+                    return Math.random() < 0.5 ? -1 : 1;
+                }
+
+        function drawVisualization(audioData) {
+
+            // Remove existing SVG if it exists
+            let existingSvg = document.querySelector('svg');
+            if (existingSvg) {
+                existingSvg.remove();
+            }
+
+             
+
+            // Get the selected feature and characteristic
+            const selectedFeature1 = featureSelect1.value;
+            const selectedFeature2 = featureSelect2.value;
+            const selectedFeature3 = featureSelect3.value;
+            const selectedFeature4 = featureSelect4.value;
+            const selectedFeature5 = featureSelect5.value;
+            
+
+            // Get the current state of the checkbox and the slider value
+            const isThresholdEnabled = thresholdToggle.checked;
+            const zeroCrossingThreshold = parseFloat(thresholdSlider.value);
+
+            const isThresholdCircleEnabled = thresholdCircle.checked;
+
+
+            console.log(selectedFeature1)
+            console.log(selectedFeature2)
+            console.log(selectedFeature3)
+            console.log(selectedFeature4)
+            console.log(audioData);
+
+            // Create SVG container
+            var svgContainer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svgContainer.setAttribute("id", "svgCanvas");
+            svgContainer.setAttribute("width", canvasWidth);
+            svgContainer.setAttribute("height", 800);
+            
+            document.body.appendChild(svgContainer);
+
+            // Initialize maxAmplitude to the smallest possible value
+            let maxSpectralCentroid = Number.MIN_SAFE_INTEGER;
+            let maxSpectralFlux = Number.MIN_SAFE_INTEGER;
+            let maxAmplitude = Number.MIN_SAFE_INTEGER;
+            let maxZerocrossingrate = Number.MIN_SAFE_INTEGER;
+            let maxYinF0 = Number.MIN_SAFE_INTEGER;
+            let maxStandardDeviation = Number.MIN_SAFE_INTEGER;
+
+            let maxSpectralCentroidMinusStandardDeviation = Number.MIN_SAFE_INTEGER;
+            // Threshold for zero crossing rate
+            //const zeroCrossingThreshold = 30;
+            // Calculate maxAmplitude and maxZerocrossingrate
+            for (let i = 0; i < audioData.json_data.Song.features_per_timestamp.length; i++) {
+                if (audioData.json_data.Song.features_per_timestamp[i].amplitude > maxAmplitude) {
+                    maxAmplitude = audioData.json_data.Song.features_per_timestamp[i].amplitude;
+                }
+                if (audioData.json_data.Song.features_per_timestamp[i].zerocrossingrate > maxZerocrossingrate) {
+                    maxZerocrossingrate = audioData.json_data.Song.features_per_timestamp[i].zerocrossingrate;
+                }
+                if (audioData.json_data.Song.features_per_timestamp[i].spectral_centroid > maxSpectralCentroid) {
+                    maxSpectralCentroid = audioData.json_data.Song.features_per_timestamp[i].spectral_centroid;
+                }
+                if (audioData.json_data.Song.features_per_timestamp[i].spectral_flux > maxSpectralFlux) {
+                    maxSpectralFlux = audioData.json_data.Song.features_per_timestamp[i].spectral_flux;
+                }
+                if (audioData.json_data.Song.features_per_timestamp[i].yin_f0 > maxYinF0) {
+                    maxYinF0 = audioData.json_data.Song.features_per_timestamp[i].yin_f0;
+                }
+                if (audioData.json_data.Song.features_per_timestamp[i].standard_deviation > maxStandardDeviation) {
+                    maxStandardDeviation = audioData.json_data.Song.features_per_timestamp[i].standard_deviation;
+                }
+                if ((audioData.json_data.Song.features_per_timestamp[i].spectral_centroid - audioData.json_data.Song.features_per_timestamp[i].standard_deviation/2) > maxSpectralCentroidMinusStandardDeviation) {
+                    maxSpectralCentroidMinusStandardDeviation = (audioData.json_data.Song.features_per_timestamp[i].spectral_centroid - audioData.json_data.Song.features_per_timestamp[i].standard_deviation/2);
+                }
+            }
+            console.log("maxSpectralCentroidMinusStandardDeviation:",maxSpectralCentroidMinusStandardDeviation)
+            // Loop through each time frame
+            for (let i = 0; i < audioData.json_data.Song.features_per_timestamp.length; i++) {
+                let feature = audioData.json_data.Song.features_per_timestamp[i];
+
+                // Calculate x position based on timestamp
+                let x = map(feature.timestamp, 0, audioData.json_data.Song.features_per_timestamp[audioData.json_data.Song.features_per_timestamp.length - 1].timestamp, 0, canvasWidth);
+
+                // Calculate y position based on feature values
+                // let y_axis = map(feature.spectral_centroid, 0, 9000, 800, 0);
+                // Calculate line length based on selected feature1
+                let y_axis = 0;
+                switch (selectedFeature5) {
+                    case "amplitude":
+                        y_axis = map(feature.amplitude, 0, maxAmplitude, 800, 0);
+                        break;
+                    case "zerocrossingrate":
+                        y_axis = map(feature.zerocrossingrate, 0, maxZerocrossingrate, 800, 0);
+                        break;
+                    case "spectral_centroid":
+                        y_axis = map(feature.spectral_centroid, 0, maxSpectralCentroid, 800, 0);
+                        break;
+                    case "spectral_flux":
+                        y_axis = map(feature.spectral_flux, 0, maxSpectralFlux, 800, 0);
+                        break;
+                    case "yin_f0":
+                        y_axis = map(feature.yin_f0, 0, maxYinF0, 800, 0);
+                        break;
+                    case "spectral_deviation":
+                        y_axis = map(feature.standard_deviation, 0, maxStandardDeviation, 800, 0);
+                        break;
+                    case "normalized_height":
+                        y_axis = map((feature.spectral_centroid - feature.standard_deviation/2)+600, 0, maxSpectralCentroidMinusStandardDeviation, 600, 0);
+                        break;
+                    case "none":
+                        y_axis = 400
+                        break;
+                    default:
+                        y_axis = map(feature.spectral_centroid, 0, maxSpectralCentroid, 800, 0);
+                }
+                // // Calculate line length based on amplitude
+                // let lineLength = map(feature.amplitude, 0, maxAmplitude, 0, 80);
+
+                // Calculate line length based on selected feature1
+                let lineLength = 0;
+                switch (selectedFeature1) {
+                    case "amplitude":
+                        lineLength = map(feature.amplitude, 0, maxAmplitude, 0, 80);
+                        break;
+                    case "zerocrossingrate":
+                        lineLength = map(feature.zerocrossingrate, 0, maxZerocrossingrate, 0, 80);
+                        break;
+                    case "spectral_centroid":
+                        lineLength = map(feature.spectral_centroid, 0, maxSpectralCentroid, 0, 80);
+                        break;
+                    case "spectral_flux":
+                        lineLength = map(feature.spectral_flux, 0, maxSpectralFlux, 0, 80);
+                        break;
+                    case "yin_f0":
+                        lineLength = map(feature.yin_f0, 0, maxYinF0, 0, 80);
+                        break;
+                    case "spectral_deviation":
+                        lineLength = map(feature.standard_deviation, 0, maxStandardDeviation, 0, 80);
+                        break;
+                    case "none":
+                        lineLength = 10
+                        break;
+                    default:
+                        lineLength = map(feature.amplitude, 0, maxAmplitude, 0, 80);
+                }
+
+                // Calculate line width based on selected feature2
+                let lineWidth = 1;
+                switch (selectedFeature2) {
+                    case "amplitude":
+                        lineWidth = map(feature.amplitude, 0, maxAmplitude, 1, 10);
+                        break;
+                    case "zerocrossingrate":
+                        lineWidth = map(feature.zerocrossingrate, 0, maxZerocrossingrate, 1, 10);
+                        break;
+                    case "spectral_centroid":
+                        lineWidth = map(feature.spectral_centroid, 0, maxSpectralCentroid, 1, 10);
+                        break;
+                    case "spectral_flux":
+                        lineWidth = map(feature.spectral_flux, 0, maxSpectralFlux, 1, 10);
+                        break;
+                    case "yin_f0":
+                        lineWidth = map(feature.yin_f0, 0, maxYinF0, 0, 10);
+                        break;
+                    case "spectral_deviation":
+                        lineWidth = map(feature.standard_deviation, 0, maxStandardDeviation, 0, 10);
+                        break;
+                    case "none":
+                        lineWidth = 4
+                        break;
+                    default:
+                        lineWidth = map(feature.amplitude, 0, maxAmplitude, 1, 10);
+                }
+
+                // Calculate color based on selected feature3
+                let colorValue = 0;
+                switch (selectedFeature3) {
+                    case "amplitude":
+                        colorValue = map(feature.amplitude, 0, maxAmplitude, 100, 0); // Grayscale
+                        break;
+                    case "zerocrossingrate":
+                        colorValue = map(feature.zerocrossingrate, 0, maxZerocrossingrate, 100, 0);
+                        break;
+                    case "spectral_centroid":
+                        colorValue = map(feature.spectral_centroid, 0, maxSpectralCentroid, 100, 0);
+                        break;
+                    case "spectral_flux":
+                        colorValue = map(feature.spectral_flux, 0, maxSpectralFlux, 100, 0);
+                        break;
+                    case "yin_f0":
+                        colorValue = map(feature.yin_f0, 0, maxYinF0, 100, 0);
+                        break;
+                    case "spectral_deviation":
+                        colorValue = map(feature.standard_deviation, 0, maxStandardDeviation, 100, 0);
+                        break;
+                    case "none":
+                        colorValue = 80
+                        break;
+                    default:
+                        colorValue = map(feature.amplitude, 0, maxAmplitude, 100, 0);
+                }
+                // Calculate angle based on selected feature4
+                let angle = 0;
+                switch (selectedFeature4) {
+                    case "amplitude":
+                        angle = map(feature.amplitude, 0, maxAmplitude, 0, feature.amplitude);
+                        break;
+                    case "zerocrossingrate":
+                        angle = map(feature.zerocrossingrate, 0, maxZerocrossingrate, 0,  feature.zerocrossingrate);
+                        break;
+                    case "spectral_centroid":
+                        angle = map(feature.spectral_centroid, 0, maxSpectralCentroid, 0,  feature.zerocrossingrate);
+                        break;
+                    case "spectral_flux":
+                        angle = map(feature.spectral_flux, 0, maxSpectralFlux, 0, feature.spectral_flux);
+                        break;
+                    case "yin_f0":
+                        angle = map(feature.yin_f0, 0, maxYinF0, 0, feature.yin_f0);
+                        break;
+                    case "spectral_deviation":
+                        angle = map(feature.standard_deviation, 0, maxStandardDeviation, 0, feature.standard_deviation);
+                        break;
+                    case "none":
+                        angle = 0
+                        break;
+                    default:
+                        // let angleDifference = (feature.zerocrossingrate - audioData.json_data.Song.general_info.median_zcr)/audioData.json_data.Song.general_info.iqr_zcr;
+
+                        angle = map(feature.zerocrossingrate, 0, maxZerocrossingrate, 0,  feature.zerocrossingrate);
+                }
+                angle = angle * getRandomSign() + 90;
+
+                // Calculate end points of the line
+                let x1 = x - lineLength / 2 * Math.cos(angle);
+                let y1 = y_axis - lineLength / 2 * Math.sin(angle);
+                let x2 = x + lineLength / 2 * Math.cos(angle);
+                let y2 = y_axis + lineLength / 2 * Math.sin(angle);
+
+                // Calculate control points for the Bezier curve
+                let ctrlX1 = x - lineLength * Math.cos(angle) / 4; // Control point 1 x-coordinate
+                let ctrlY1 = y_axis - lineLength * Math.sin(angle) / 2; // Control point 1 y-coordinate
+                let ctrlX2 = x + lineLength * Math.cos(angle) / 4; // Control point 2 x-coordinate
+                let ctrlY2 = y_axis + lineLength * Math.sin(angle) / 2; // Control point 2 y-coordinate
+
+
+                if (isThresholdEnabled && feature.zerocrossingrate > zeroCrossingThreshold) {
+                    // Draw multiple lines at different y heights (spectral centroids)
+                    for (let j = 0; j < 100; j++) { // Draw 5 lines at different y heights
+                        // Calculate y position based on feature values
+                        let y_axis = map((feature.spectral_centroid + 500)*j*0.01, 0, 5000, 800, 0);
+                        // Calculate end points of the line
+                        let x1 = x - lineLength / 2 * Math.cos(angle);
+                        let y1 = y_axis - lineLength / 2 * Math.sin(angle*Math.random());
+                        let x2 = x + lineLength / 2 * Math.cos(angle);
+                        let y2 = y_axis + lineLength / 2 * Math.sin(angle*Math.random());
+
+                        // Calculate control points for the Bezier curve
+                        let ctrlX1 = x - lineLength * Math.cos(angle) / 4; // Control point 1 x-coordinate
+                        let ctrlY1 = y_axis - lineLength * Math.sin(angle) / 2; // Control point 1 y-coordinate
+                        let ctrlX2 = x + lineLength * Math.cos(angle) / 4; // Control point 2 x-coordinate
+                        let ctrlY2 = y_axis + lineLength * Math.sin(angle) / 2; // Control point 2 y-coordinate
+
+
+                        // Create a path element for the Bezier curve
+                        let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        path.setAttribute("d", `M${x1},${y1} C${ctrlX1},${ctrlY1} ${ctrlX2},${ctrlY2} ${x2},${y2}`);
+                        path.setAttribute("stroke", `rgb(${colorValue},${colorValue},${colorValue})`);
+                        path.setAttribute("stroke-width", lineWidth);
+                        path.setAttribute("fill", "none");
+                        // Generate a random number between 1 and 3
+                        // let randomClassNumber = Math.floor(Math.random() * 3) + 1;
+
+                        // Add CSS class for animation with the random number appended
+                        // path.classList.add(`path-animation-${randomClassNumber}`);
+                        svgContainer.appendChild(path);
+                    }
+                } else {
+
+
+                    if (isThresholdCircleEnabled) {
+                        // Calculate properties for circle
+                        let radius = map(feature.amplitude, 0, maxAmplitude, 2, 10);
+                        let colorValue = map(feature.spectral_centroid, 0, maxSpectralCentroid, 100, 0);
+
+                        let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                        circle.setAttribute("cx", x);
+                        circle.setAttribute("cy", y_axis);
+                        circle.setAttribute("r", radius);
+                        circle.setAttribute("fill", `rgb(0,0,${colorValue})`);
+
+                        svgContainer.appendChild(circle);
+                    }
+                    // else {
+                    // Create a path element for the Bezier curve
+                    let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    path.setAttribute("d", `M${x1},${y1} C${ctrlX1},${ctrlY1} ${ctrlX2},${ctrlY2} ${x2},${y2}`);
+                    path.setAttribute("stroke", `rgb(${colorValue},${colorValue},${colorValue})`);
+                    path.setAttribute("stroke-width", lineWidth);
+                    path.setAttribute("fill", "none");
+                    // Generate a random number between 1 and 3
+                    // let randomClassNumber = Math.floor(Math.random() * 3) + 1;
+
+                    // Add CSS class for animation with the random number appended
+                    // path.classList.add(`path-animation-${randomClassNumber}`);
+                    svgContainer.appendChild(path);
+                    // }
+
+                    
+                }
+
+                
+                
+            }
+
+
+
+            const svgElement = document.getElementById("svgCanvas");
+      let selectedElements = [];
+
+      function initializeSvgDragSelect() {
+        return svgDragSelect({
+          svg: svgElement,
+          referenceElement: null,
+          selector: "enclosure",
+
+          onSelectionStart({ svg, pointerEvent, cancel }) {
+            if (pointerEvent.button !== 0) {
+              cancel();
+              return;
+            }
+
+            selectedElements = svg.querySelectorAll('[data-selected]');
+            for (let i = 0; i < selectedElements.length; i++) {
+              selectedElements[i].removeAttribute('data-selected');
+            }
+          },
+
+          onSelectionChange({ svg, pointerEvent, selectedElements: newSelectedElements, previousSelectedElements, newlySelectedElements, newlyDeselectedElements }) {
+            newlyDeselectedElements.forEach(element => element.removeAttribute('data-selected'));
+            newlySelectedElements.forEach(element => element.setAttribute('data-selected', ''));
+          },
+
+          onSelectionEnd({ svg, pointerEvent, selectedElements: newSelectedElements }) {
+            selectedElements = newSelectedElements;
+            if (selectedElements.length > 0) {
+              const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              group.setAttribute('id', 'selected-group');
+              
+              selectedElements.forEach(el => {
+                group.appendChild(el.cloneNode(true));
+                el.remove();
+              });
+
+              svg.appendChild(group);
+
+              gsap.registerPlugin(Draggable);
+              Draggable.create(group, {
+                type: "x,y",
+                onPress: function() {
+                  dragSelectInstance.cancel();
+                },
+                onRelease: function() {
+                  dragSelectInstance = initializeSvgDragSelect();
+                },
+              });
+            }
+          },
+        });
+      }
+
+      let dragSelectInstance = initializeSvgDragSelect();
+
+      document.getElementById("joinButton").addEventListener("click", function() {
+        if (selectedElements.length > 0) {
+          let combinedPathData = '';
+          selectedElements.forEach(el => {
+            if (el.tagName === 'path') {
+              combinedPathData += ' ' + el.getAttribute('d');
+              el.remove();
+            }
+          });
+
+          const newPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          newPath.setAttribute('d', combinedPathData.trim());
+          newPath.setAttribute('stroke', 'black');
+          newPath.setAttribute('stroke-width', '1');
+          newPath.setAttribute('fill', 'none');
+          svgElement.appendChild(newPath);
+
+          // Clear the selection
+          selectedElements = [];
+        }
+      });
+
+            // cleanup for when the select-on-drag behavior is no longer needed
+            // (including unbinding of the event listeners)
+            // cancel()
+
+
+        }
+
+        
+        
+
+        // function drawVisualization(audioData) {
+        //     // console.log(audioData)
+        //     // Define the setup and draw functions
+        //     function setup() {
+        //         // Create a canvas
+        //         createCanvas(1200, 800);
+        //         background(0);
+        //     }
+
+        //     function draw() {
+        //         // Loop through each time frame
+        //         for (let i = 0; i < audioData.Song.features_per_timestamp.length; i++) {
+        //             let feature = audioData.Song.features_per_timestamp[i];
+
+        //             // Calculate x position based on timestamp
+        //             let x = map(feature.timestamp, 0, audioData.Song.features_per_timestamp[audioData.Song.features_per_timestamp.length - 1].timestamp, 0, width);
+
+        //             // Calculate y position based on feature values
+        //             let y_axis = map(feature.spectral_centroid, 0, 20000, height, 0);
+        //             let y_zerocrossingrate = map(feature.zerocrossingrate, 0, 1, height, 0);
+        //             let y_amplitude = map(feature.amplitude, 0, 1, height, 0);
+
+        //             // Draw lines or shapes based on feature values
+        //             stroke(255, 0, 0); // Red for spectral centroid
+        //             line(x, height, x, y_axis); // Vertical line for spectral centroid
+
+        //             stroke(0, 255, 0); // Green for zero crossing rate
+        //             line(x, height, x, y_zerocrossingrate); // Vertical line for zero crossing rate
+
+        //             stroke(0, 0, 255); // Blue for amplitude
+        //             let rectWidth = 10;
+        //             rect(x - rectWidth / 2, y_amplitude, rectWidth, height - y_amplitude); // Rectangle for amplitude
+        //         }
+        //     }
+
+        //     // Initialize p5.js canvas
+        //     new p5(null, 'visualization'); // 'visualization' is the ID of the container element for the canvas
+        //     // Initialize p5.js canvas
+        //     // setup(); // Call setup function immediately
+        //     // draw(); // Call draw function immediately
+        // }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            var files = event.dataTransfer.files;
+            if (files.length > 0) {
+                var file = files[0];
+                if (file.type === 'audio/wav') {
+                    var formData = new FormData();
+                    formData.append('wav_file', file);
+                    fetch('/upload_wav', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to upload WAV file.');
+                        }
+                        return response.text();
+                    })
+                    .then(data => {
+                        dropArea.style.display = "none";
+                        //alert('WAV file uploaded successfully.');
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "WAV file uploaded successfully.",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                        // Store the response in a variable
+                        var responseData = JSON.parse(data);
+                        globalAudioData = responseData;
+                        globalFile = file;
+                        drawVisualization(responseData);
+                        handleAudioPlayback(file);
+                        // Log the variable to the console
+                        // console.log(responseData);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to upload WAV file.');
+                    });
+                } else {
+                    alert('Please upload a WAV file.');
+                }
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+        }
+
+        function handleAudioPlayback(file) {
+            if (file) {
+                const url = URL.createObjectURL(file);
+                audioPlayer.src = url;
+                audioPlayer.load();
+            }
+            audioPlayer.addEventListener('loadedmetadata', () => {
+                audioDuration = audioPlayer.duration;
+                drawVerticalLine();
+            });
+        }
+
+        // Function to draw the vertical line
+        function drawVerticalLine() {
+            const svgCanvas = document.getElementById('svgCanvas');
+
+            
+            console.log("ID:",document.getElementById('progressLine'));
+            console.log(document.getElementById('progressLine') === null)
+            if (document.getElementById('progressLine') == null) {
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("id", "progressLine");
+                console.log("line", line)
+                line.setAttribute("x1", 0);
+                line.setAttribute("y1", 0);
+                line.setAttribute("x2", 0);
+                line.setAttribute("y2", 800);
+                line.setAttribute("stroke", "red");
+                line.setAttribute("stroke-width", 2);
+                svgCanvas.appendChild(line);
+            }
+            
+            
+
+            // Update the position of the line based on the audio's current time
+            audioPlayer.addEventListener('timeupdate', updateLinePosition);
+        }
+
+        // Function to update the position of the vertical line
+        function updateLinePosition() {
+            const currentTime = audioPlayer.currentTime;
+            const canvasWidth = svgCanvas.getBoundingClientRect().width;
+            const x = (currentTime / audioDuration) * canvasWidth;
+            if (document.getElementById('progressLine') !== null) {
+                const line = document.getElementById('progressLine');
+                line.setAttribute("x1", x);
+                line.setAttribute("x2", x); 
+            }
+            
+        }
+
+    </script>
+</body>
+</html>

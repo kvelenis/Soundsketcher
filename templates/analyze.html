@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Classification</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Upload an Audio File and Enter Candidate Labels</h1>
+    <form id="upload-form" action="/analyze_wav" method="post" enctype="multipart/form-data">
+        <label for="wav_file">Select a WAV file:</label>
+        <input type="file" id="wav_file" name="wav_file" accept=".wav" required>
+        <br>
+        <label for="candidate_labels">Enter candidate labels (comma-separated):</label>
+        <input type="text" id="candidate_labels" name="candidate_labels" required>
+        <br>
+        <button type="submit">Upload and Analyze</button>
+    </form>
+    <h2>Classification Results</h2>
+    <audio id="audio-player" controls style="display: none;">
+        <source id="audio-source" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <div id="plot"></div>
+    <div id="radar-plot"></div>
+    <script>
+        let classificationData;
+        const colorMap = {};
+
+        document.getElementById("upload-form").onsubmit = async function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const response = await fetch("/analyze_wav", {
+                method: "POST",
+                body: formData
+            });
+            if (response.ok) {
+                classificationData = await response.json();
+                assignColors(classificationData);
+                renderPlot(classificationData);
+                renderRadarPlot(classificationData, 0);
+                // Load the audio file into the player
+                const audioFile = formData.get('wav_file');
+                const audioURL = URL.createObjectURL(audioFile);
+                document.getElementById('audio-source').src = audioURL;
+                const audioPlayer = document.getElementById('audio-player');
+                audioPlayer.style.display = 'block';
+                audioPlayer.load();
+                audioPlayer.addEventListener('timeupdate', () => updatePlot(audioPlayer.currentTime));
+            } else {
+                alert("Failed to analyze audio file.");
+            }
+        };
+
+        function assignColors(plotData) {
+            const colors = Plotly.d3.scale.category10().range();
+            let colorIndex = 0;
+            for (let label in plotData) {
+                colorMap[label] = colors[colorIndex % colors.length];
+                colorIndex++;
+            }
+        }
+
+        function renderPlot(plotData) {
+            var traces = [];
+            for (var label in plotData) {
+                traces.push({
+                    x: plotData[label].time_points,
+                    y: plotData[label].scores,
+                    mode: 'lines',
+                    name: label,
+                    line: { color: colorMap[label], shape: 'spline' }
+                });
+            }
+            var layout = {
+                title: 'Zero-Shot Audio Classification Scores Over Time',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Score' }
+            };
+            Plotly.newPlot('plot', traces, layout);
+        }
+
+        function renderRadarPlot(plotData, currentTime) {
+            let radarData = getRadarDataAtTime(plotData, currentTime);
+            let radarTrace = {
+                type: 'scatterpolar',
+                r: radarData.scores,
+                theta: radarData.labels,
+                fill: 'toself',
+                marker: { color: radarData.colors }
+            };
+            let layout = {
+                polar: {
+                    radialaxis: { visible: true, range: [0, 1] }
+                },
+                title: 'Classification Scores at Current Time'
+            };
+            Plotly.newPlot('radar-plot', [radarTrace], layout);
+        }
+
+        function updateRadarPlot(plotData, currentTime) {
+            let radarData = getRadarDataAtTime(plotData, currentTime);
+            Plotly.update('radar-plot', {
+                'r': [radarData.scores],
+                'theta': [radarData.labels],
+                'marker': { color: radarData.colors }
+            });
+        }
+
+        function updatePlot(currentTime) {
+            Plotly.relayout('plot', {
+                shapes: [{
+                    type: 'line',
+                    x0: currentTime,
+                    x1: currentTime,
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    line: {
+                        color: 'red',
+                        width: 2
+                    }
+                }]
+            });
+            updateRadarPlot(classificationData, currentTime);
+        }
+
+        function getRadarDataAtTime(plotData, currentTime) {
+            let labels = Object.keys(plotData);
+            let scores = labels.map(label => {
+                let index = plotData[label].time_points.findIndex(time => time >= currentTime);
+                return index !== -1 ? plotData[label].scores[index] : 0;
+            });
+            let colors = labels.map(label => colorMap[label]);
+            return { labels, scores, colors };
+        }
+    </script>
+</body>
+</html>

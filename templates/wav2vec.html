@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload and Visualize Audio</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Upload an audio file</h1>
+    <form id="upload-form" enctype="multipart/form-data" method="post">
+        <input name="file" type="file" accept="audio/*">
+        <input type="submit">
+    </form>
+    <div id="plot"></div>
+    <audio id="audio-player" controls style="display:none;"></audio>
+
+    <script>
+        async function fetchAndPlotAllAudios() {
+            const response = await fetch('/all_audios');
+            const data = await response.json();
+            plotData(data);
+        }
+
+        function plotData(data) {
+            const trace = {
+                x: data.x,
+                y: data.y,
+                text: data.text,
+                mode: 'markers+text',
+                type: 'scatter'
+            };
+
+            const layout = {
+                title: 't-SNE Visualization of Audio Embeddings',
+                xaxis: { title: 't-SNE Component 1' },
+                yaxis: { title: 't-SNE Component 2' },
+                width: 900,  // Set the width of the plot
+                height: 900  // Set the height of the plot to make it square
+            };
+
+            Plotly.newPlot('plot', [trace], layout);
+
+            const plotDiv = document.getElementById('plot');
+
+            plotDiv.on('plotly_click', function(eventData) {
+                const pointIndex = eventData.points[0].pointIndex;
+                const fileId = data.file_ids[pointIndex];
+
+                console.log('Clicked point index:', pointIndex);
+                console.log('File ID:', fileId);
+
+                if (fileId) {
+                    const audioPlayer = document.getElementById('audio-player');
+                    audioPlayer.src = `/audio/${fileId}`;
+                    audioPlayer.style.display = 'block';
+                    audioPlayer.play();
+                }
+            });
+        }
+
+        document.getElementById('upload-form').onsubmit = async function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+
+            const response = await fetch('/upload_wav2vec', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                console.error('Failed to upload the audio file.');
+                return;
+            }
+
+            const data = await response.json();
+            plotData(data);
+
+            const audioPlayer = document.getElementById('audio-player');
+            audioPlayer.src = data.new_audio_url;
+            audioPlayer.style.display = 'block';
+        };
+
+        // Fetch and plot all uploaded audios on page load
+        window.onload = fetchAndPlotAllAudios;
+    </script>
+</body>
+</html>
