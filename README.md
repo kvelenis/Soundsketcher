@@ -1,6 +1,4 @@
 # Soundsketcher
-An online app that creates graphic music scores with audio input
-# Soundsketcher Project
 
 Soundsketcher is a research-driven tool designed to explore the intersection of sound and visual art. It translates audio features into meaningful visual representations, focusing on perceptual relevance, automation, and customization. The project incorporates cognitive science principles and cross-modal mappings to generate intuitive and expressive visualizations of sound events.
 
