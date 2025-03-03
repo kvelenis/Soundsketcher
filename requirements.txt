@@ -1,0 +1,42 @@
+## requirements.txt
+
+# FastAPI and dependencies
+fastapi
+starlette
+jinja2
+uvicorn
+
+# Machine Learning
+scikit-learn
+torch
+transformers
+clip-by-openai
+
+# Audio Processing
+librosa
+soundfile
+aubio
+timbral_models
+mosqito
+crepe
+
+# Signal Processing
+scipy
+numpy
+pandas
+
+# Image Processing
+pillow
+
+# File Handling
+uuid
+os
+json
+datetime
+time
+math
+
+# Custom Modules (Ensure these scripts exist in your project)
+-e ./soundsketcher_aux_scripts
+
+---
