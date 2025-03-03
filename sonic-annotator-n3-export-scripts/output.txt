@@ -1,0 +1,268 @@
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+LibXtract compiled with ooura FFT
+vamp:azi:azi:plan
+vamp:bbc-vamp-plugins:bbc-energy:average
+vamp:bbc-vamp-plugins:bbc-energy:lowenergy
+vamp:bbc-vamp-plugins:bbc-energy:pdip
+vamp:bbc-vamp-plugins:bbc-energy:rmsdelta
+vamp:bbc-vamp-plugins:bbc-energy:rmsenergy
+vamp:bbc-vamp-plugins:bbc-intensity:intensity
+vamp:bbc-vamp-plugins:bbc-intensity:intensity-ratio
+vamp:bbc-vamp-plugins:bbc-peaks:peaks
+vamp:bbc-vamp-plugins:bbc-rhythm:autocor
+vamp:bbc-vamp-plugins:bbc-rhythm:average
+vamp:bbc-vamp-plugins:bbc-rhythm:avg-onset-freq
+vamp:bbc-vamp-plugins:bbc-rhythm:diff
+vamp:bbc-vamp-plugins:bbc-rhythm:mean-correlation-peak
+vamp:bbc-vamp-plugins:bbc-rhythm:onset
+vamp:bbc-vamp-plugins:bbc-rhythm:onset_curve
+vamp:bbc-vamp-plugins:bbc-rhythm:peak-valley-ratio
+vamp:bbc-vamp-plugins:bbc-rhythm:rhythm-strength
+vamp:bbc-vamp-plugins:bbc-rhythm:tempo
+vamp:bbc-vamp-plugins:bbc-spectral-contrast:mean
+vamp:bbc-vamp-plugins:bbc-spectral-contrast:peaks
+vamp:bbc-vamp-plugins:bbc-spectral-contrast:valleys
+vamp:bbc-vamp-plugins:bbc-spectral-flux:spectral-flux
+vamp:bbc-vamp-plugins:bbc-speechmusic-segmenter:segmentation
+vamp:bbc-vamp-plugins:bbc-speechmusic-segmenter:skewness
+vamp:beatroot-vamp:beatroot:beats
+vamp:beatroot-vamp:beatroot:unfilled
+vamp:cepstral-pitchtracker:cepstral-pitchtracker:f0
+vamp:cepstral-pitchtracker:cepstral-pitchtracker:notes
+vamp:cqvamp:cqchromavamp:chromagram
+vamp:cqvamp:cqvamp:constantq
+vamp:cqvamp:cqvampmidi:constantq
+vamp:match-vamp-plugin:match:a_b
+vamp:match-vamp-plugin:match:a_b_divergence
+vamp:match-vamp-plugin:match:a_b_temporatio
+vamp:match-vamp-plugin:match:a_cfeatures
+vamp:match-vamp-plugin:match:a_features
+vamp:match-vamp-plugin:match:b_a
+vamp:match-vamp-plugin:match:b_cfeatures
+vamp:match-vamp-plugin:match:b_features
+vamp:match-vamp-plugin:match:overall_cost
+vamp:match-vamp-plugin:match:path
+vamp:mvamp:marsyas_bextract_centroid:centroid_value
+vamp:mvamp:marsyas_bextract_lpcc:linear_prediction_cepstral_coefficients
+vamp:mvamp:marsyas_bextract_lsp:line_spectral_pairs
+vamp:mvamp:marsyas_bextract_mfcc:mfcc
+vamp:mvamp:marsyas_bextract_rolloff:rolloff
+vamp:mvamp:marsyas_bextract_scf:scf
+vamp:mvamp:marsyas_bextract_sfm:spf
+vamp:mvamp:marsyas_bextract_zero_crossings:zero_crossing_counts
+vamp:mvamp:marsyas_ibt:beat_times
+vamp:mvamp:zerocrossing:counts
+vamp:nnls-chroma:chordino:chordnotes
+vamp:nnls-chroma:chordino:harmonicchange
+vamp:nnls-chroma:chordino:loglikelihood
+vamp:nnls-chroma:chordino:simplechord
+vamp:nnls-chroma:nnls-chroma:basschroma
+vamp:nnls-chroma:nnls-chroma:bothchroma
+vamp:nnls-chroma:nnls-chroma:chroma
+vamp:nnls-chroma:nnls-chroma:logfreqspec
+vamp:nnls-chroma:nnls-chroma:semitonespectrum
+vamp:nnls-chroma:nnls-chroma:tunedlogfreqspec
+vamp:nnls-chroma:tuning:localtuning
+vamp:nnls-chroma:tuning:tuning
+vamp:pyin:localcandidatepyin:pitchtrackcandidates
+vamp:pyin:pyin:candidatesalience
+vamp:pyin:pyin:f0candidates
+vamp:pyin:pyin:f0probs
+vamp:pyin:pyin:notes
+vamp:pyin:pyin:smoothedpitchtrack
+vamp:pyin:pyin:voicedprob
+vamp:pyin:yin:f0
+vamp:pyin:yin:periodicity
+vamp:pyin:yin:rms
+vamp:pyin:yin:salience
+vamp:qm-vamp-plugins:qm-adaptivespectrogram:output
+vamp:qm-vamp-plugins:qm-barbeattracker:bars
+vamp:qm-vamp-plugins:qm-barbeattracker:beatcounts
+vamp:qm-vamp-plugins:qm-barbeattracker:beats
+vamp:qm-vamp-plugins:qm-barbeattracker:beatsd
+vamp:qm-vamp-plugins:qm-chromagram:chromagram
+vamp:qm-vamp-plugins:qm-chromagram:chromameans
+vamp:qm-vamp-plugins:qm-constantq:constantq
+vamp:qm-vamp-plugins:qm-dwt:wcoeff
+vamp:qm-vamp-plugins:qm-keydetector:key
+vamp:qm-vamp-plugins:qm-keydetector:keystrength
+vamp:qm-vamp-plugins:qm-keydetector:mergedkeystrength
+vamp:qm-vamp-plugins:qm-keydetector:mode
+vamp:qm-vamp-plugins:qm-keydetector:tonic
+vamp:qm-vamp-plugins:qm-mfcc:coefficients
+vamp:qm-vamp-plugins:qm-mfcc:means
+vamp:qm-vamp-plugins:qm-onsetdetector:detection_fn
+vamp:qm-vamp-plugins:qm-onsetdetector:onsets
+vamp:qm-vamp-plugins:qm-onsetdetector:smoothed_df
+vamp:qm-vamp-plugins:qm-segmenter:segmentation
+vamp:qm-vamp-plugins:qm-similarity:beatspectrum
+vamp:qm-vamp-plugins:qm-similarity:distancematrix
+vamp:qm-vamp-plugins:qm-similarity:distancevector
+vamp:qm-vamp-plugins:qm-similarity:means
+vamp:qm-vamp-plugins:qm-similarity:sorteddistancevector
+vamp:qm-vamp-plugins:qm-similarity:variances
+vamp:qm-vamp-plugins:qm-tempotracker:beats
+vamp:qm-vamp-plugins:qm-tempotracker:detection_fn
+vamp:qm-vamp-plugins:qm-tempotracker:tempo
+vamp:qm-vamp-plugins:qm-tonalchange:changepositions
+vamp:qm-vamp-plugins:qm-tonalchange:tcfunction
+vamp:qm-vamp-plugins:qm-tonalchange:tcstransform
+vamp:qm-vamp-plugins:qm-transcription:transcription
+vamp:segmentino:segmentino:segmentation
+vamp:silvet:silvet:chroma
+vamp:silvet:silvet:notes
+vamp:silvet:silvet:onoffsets
+vamp:silvet:silvet:onsets
+vamp:silvet:silvet:pitchactivation
+vamp:silvet:silvet:templates
+vamp:silvet:silvet:timefreq
+vamp:simple-cepstrum:simple-cepstrum:am
+vamp:simple-cepstrum:simple-cepstrum:cepstrum
+vamp:simple-cepstrum:simple-cepstrum:env
+vamp:simple-cepstrum:simple-cepstrum:es
+vamp:simple-cepstrum:simple-cepstrum:interpolated_peak
+vamp:simple-cepstrum:simple-cepstrum:peak
+vamp:simple-cepstrum:simple-cepstrum:peak_proportion
+vamp:simple-cepstrum:simple-cepstrum:peak_to_rms
+vamp:simple-cepstrum:simple-cepstrum:peak_to_second_peak
+vamp:simple-cepstrum:simple-cepstrum:raw_cepstral_peak
+vamp:simple-cepstrum:simple-cepstrum:total
+vamp:simple-cepstrum:simple-cepstrum:variance
+vamp:tempogram:tempogram:cyclicTempogram
+vamp:tempogram:tempogram:nc
+vamp:tempogram:tempogram:tempogramACT
+vamp:tempogram:tempogram:tempogramDFT
+vamp:tipic:tipic:cens
+vamp:tipic:tipic:chroma
+vamp:tipic:tipic:chroma-smoothed
+vamp:tipic:tipic:clp
+vamp:tipic:tipic:clp-smoothed
+vamp:tipic:tipic:crp
+vamp:tipic:tipic:crp-smoothed
+vamp:tipic:tipic:pitch
+vamp:tipic:tipic:pitch-smoothed
+vamp:tuning-difference:tuning-difference:cents
+vamp:tuning-difference:tuning-difference:otherfeature
+vamp:tuning-difference:tuning-difference:reffeature
+vamp:tuning-difference:tuning-difference:rotfeature
+vamp:tuning-difference:tuning-difference:tuningfreq
+vamp:ua-vamp-plugins:mf0ua:mf0ua
+vamp:ua-vamp-plugins:onsetsua:odf
+vamp:ua-vamp-plugins:onsetsua:onsets
+vamp:vamp-aubio:aubiomelenergy:mfcc
+vamp:vamp-aubio:aubiomfcc:mfcc
+vamp:vamp-aubio:aubionotes:notes
+vamp:vamp-aubio:aubioonset:odf
+vamp:vamp-aubio:aubioonset:onsets
+vamp:vamp-aubio:aubioonset:todf
+vamp:vamp-aubio:aubiopitch:frequency
+vamp:vamp-aubio:aubiosilence:noisy
+vamp:vamp-aubio:aubiosilence:silencelevel
+vamp:vamp-aubio:aubiosilence:silent
+vamp:vamp-aubio:aubiospecdesc:specdesc
+vamp:vamp-aubio:aubiotempo:beats
+vamp:vamp-aubio:aubiotempo:tempo
+vamp:vamp-example-plugins:amplitudefollower:amplitude
+vamp:vamp-example-plugins:fixedtempo:acf
+vamp:vamp-example-plugins:fixedtempo:candidates
+vamp:vamp-example-plugins:fixedtempo:detectionfunction
+vamp:vamp-example-plugins:fixedtempo:filtered_acf
+vamp:vamp-example-plugins:fixedtempo:tempo
+vamp:vamp-example-plugins:percussiononsets:detectionfunction
+vamp:vamp-example-plugins:percussiononsets:onsets
+vamp:vamp-example-plugins:powerspectrum:powerspectrum
+vamp:vamp-example-plugins:spectralcentroid:linearcentroid
+vamp:vamp-example-plugins:spectralcentroid:logcentroid
+vamp:vamp-example-plugins:zerocrossing:counts
+vamp:vamp-example-plugins:zerocrossing:zerocrossings
+vamp:vamp-libxtract:amdf:amdf
+vamp:vamp-libxtract:asdf:asdf
+vamp:vamp-libxtract:autocorrelation:autocorrelation
+vamp:vamp-libxtract:average_deviation:average_deviation
+vamp:vamp-libxtract:bark_coefficients:bark_coefficients
+vamp:vamp-libxtract:crest:crest
+vamp:vamp-libxtract:dct:dct
+vamp:vamp-libxtract:f0:f0
+vamp:vamp-libxtract:failsafe_f0:failsafe_f0
+vamp:vamp-libxtract:flatness:flatness
+vamp:vamp-libxtract:harmonic_spectrum:amplitudes
+vamp:vamp-libxtract:highest_value:highest_value
+vamp:vamp-libxtract:irregularity_j:irregularity_j
+vamp:vamp-libxtract:irregularity_k:irregularity_k
+vamp:vamp-libxtract:kurtosis:kurtosis
+vamp:vamp-libxtract:loudness:loudness
+vamp:vamp-libxtract:lowest_value:lowest_value
+vamp:vamp-libxtract:mean:mean
+vamp:vamp-libxtract:mfcc:mfcc
+vamp:vamp-libxtract:noisiness:noisiness
+vamp:vamp-libxtract:nonzero_count:nonzero_count
+vamp:vamp-libxtract:odd_even_ratio:odd_even_ratio
+vamp:vamp-libxtract:peak_spectrum:amplitudes
+vamp:vamp-libxtract:rms_amplitude:rms_amplitude
+vamp:vamp-libxtract:rolloff:rolloff
+vamp:vamp-libxtract:sharpness:sharpness
+vamp:vamp-libxtract:skewness:skewness
+vamp:vamp-libxtract:smoothness:smoothness
+vamp:vamp-libxtract:spectral_centroid:spectral_centroid
+vamp:vamp-libxtract:spectral_inharmonicity:spectral_inharmonicity
+vamp:vamp-libxtract:spectral_kurtosis:spectral_kurtosis
+vamp:vamp-libxtract:spectral_skewness:spectral_skewness
+vamp:vamp-libxtract:spectral_slope:spectral_slope
+vamp:vamp-libxtract:spectral_standard_deviation:spectral_standard_deviation
+vamp:vamp-libxtract:spectral_variance:spectral_variance
+vamp:vamp-libxtract:spectrum:amplitudes
+vamp:vamp-libxtract:spread:spread
+vamp:vamp-libxtract:standard_deviation:standard_deviation
+vamp:vamp-libxtract:sum:sum
+vamp:vamp-libxtract:tonality:tonality
+vamp:vamp-libxtract:tristimulus_1:tristimulus_1
+vamp:vamp-libxtract:tristimulus_2:tristimulus_2
+vamp:vamp-libxtract:tristimulus_3:tristimulus_3
+vamp:vamp-libxtract:variance:variance
+vamp:vamp-libxtract:wavelet_f0:wavelet_f0
+vamp:vamp-libxtract:zcr:zcr

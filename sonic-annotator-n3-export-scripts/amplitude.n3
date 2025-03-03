@@ -1,0 +1,25 @@
+@prefix xsd:      <http://www.w3.org/2001/XMLSchema#> .
+@prefix vamp:     <http://purl.org/ontology/vamp/> .
+@prefix :         <#> .
+
+:transform_plugin a vamp:Plugin ;
+    vamp:identifier "amplitudefollower" .
+
+:transform_library a vamp:PluginLibrary ;
+    vamp:identifier "vamp-example-plugins" ;
+    vamp:available_plugin :transform_plugin .
+
+:transform a vamp:Transform ;
+    vamp:plugin :transform_plugin ;
+    vamp:step_size "1024"^^xsd:int ; 
+    vamp:block_size "1024"^^xsd:int ; 
+    vamp:plugin_version """1""" ; 
+    vamp:parameter_binding [
+        vamp:parameter [ vamp:identifier "attack" ] ;
+        vamp:value "0.01"^^xsd:float ;
+    ] ;
+    vamp:parameter_binding [
+        vamp:parameter [ vamp:identifier "release" ] ;
+        vamp:value "0.01"^^xsd:float ;
+    ] ;
+    vamp:output [ vamp:identifier "amplitude" ] .

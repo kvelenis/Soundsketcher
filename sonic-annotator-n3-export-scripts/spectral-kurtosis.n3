@@ -1,0 +1,17 @@
+@prefix xsd:      <http://www.w3.org/2001/XMLSchema#> .
+@prefix vamp:     <http://purl.org/ontology/vamp/> .
+@prefix :         <#> .
+
+:transform_plugin a vamp:Plugin ;
+    vamp:identifier "spectral_kurtosis" .
+
+:transform_library a vamp:PluginLibrary ;
+    vamp:identifier "vamp-libxtract" ;
+    vamp:available_plugin :transform_plugin .
+
+:transform a vamp:Transform ;
+    vamp:plugin :transform_plugin ;
+    vamp:step_size "1024"^^xsd:int ; 
+    vamp:block_size "1024"^^xsd:int ; 
+    vamp:plugin_version """4""" ; 
+    vamp:output [ vamp:identifier "spectral_kurtosis" ] .
