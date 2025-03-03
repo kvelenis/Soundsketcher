@@ -1,0 +1,16 @@
+# Ignore all `.log` files
+# *.log
+
+# Ignore a specific file
+# config.json
+
+# Ignore a specific directory
+SoundTrek/
+myenv/
+
+# Ignore all `.pyc` files in subdirectories
+# **/*.pyc
+
+# Ignore all files in a folder except one
+# config/*
+# !config/keepme.txt

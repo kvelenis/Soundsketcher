@@ -1,0 +1,608 @@
+* {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+#drop_area {
+    width: 100%;
+    height: 80vh;
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    text-align: center;
+    line-height: 200px;
+    cursor: pointer;
+    margin: 20px auto;
+    font-size: 1.2em;
+    display: flex;
+    justify-content: center; /* Centers horizontally */
+    align-items: center; /* Centers vertically */
+}
+
+.audio-player__container {
+    margin: auto;
+    display: flex;
+}
+
+#audioPlayer {
+    margin: 20px auto;
+}
+
+.path-animation-1 {
+    stroke-dasharray: 5;
+    animation: dash-1 100s linear infinite;
+}
+
+.path-animation-2 {
+    stroke-dasharray: 2;
+    animation: dash-2 80s ease-in-out infinite;
+}
+
+.path-animation-3 {
+    stroke-dasharray: 13;
+    animation: dash-3 60s ease infinite;
+}
+
+.selections__container {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    border-top: 0px;
+    border-style: solid;
+    padding:10px;
+}
+
+.left {
+    flex: 1; /* Dynamically adjust based on content */
+    text-align: left; /* Align text to the left */
+    padding: 10px;
+}
+
+.center {
+    flex: 1; /* Dynamically adjust based on content */
+    text-align: center; /* Center text */
+}
+
+.right {
+    flex: 1; /* Prevent the right div from resizing */
+    text-align: right; /* Align text to the right */
+    width: 900px; /* Fixed width for the right div */
+}   
+
+.selections__feature2sketch-container {
+    width:800px;
+    display: flex;
+    flex-direction: column;
+    margin-right: 20px;
+}
+
+.selection__container {
+    display: flex;
+    
+    justify-content: center;
+}
+
+.selection__container__noise-threshold {
+    border: 1px solid black;
+    flex-direction: column;
+    width: 300px;
+    margin: auto;
+}
+
+.selection__container__additional-sketch-parameters {
+    display: flex;
+    flex-direction: column;
+}
+
+.selection-container {
+    
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.selection-header, .selection-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selection-header {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.featureSelect {
+    width: 300px;
+}
+
+.column {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feature-column {
+    width: 30%;
+}
+
+.characteristic-column {
+    width: 30%;
+}
+
+.checkbox-column {
+    width: 20%;
+    text-align: center;
+}
+
+.slider-column {
+    width: 20%;
+    text-align: center;
+}
+
+.selection__submit-container{
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    
+}
+
+.svg-characteristic {
+    /* width:100px; */
+    margin-left: 10px;
+}
+
+@keyframes dash-1 {
+    to {
+        stroke-dashoffset: 1000;
+    }
+}
+
+@keyframes dash-2 {
+    to {
+        stroke-dashoffset: 1500;
+    }
+}
+@keyframes dash-3 {
+    to {
+        stroke-dashoffset: 800;
+    }
+}
+
+/* please setup drag area overlay styles. for example: */
+.svg-drag-select-area-overlay {
+    border: 1px dotted gray;
+    background-color: rgba(255,255,255,.4);
+}
+/* CSS to change the fill color of all selected SVG elements */
+[data-selected] {
+    fill: yellow; /* Change this to your desired color */
+    stroke: blue; /* Change this to your desired color */
+}
+
+.spinner {
+    border: 6px solid #f3f3f3; /* Light gray */
+    border-top: 6px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes zoom {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2); /* Adjust zoom level */
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.zoom-animation {
+    animation: zoom 0.3s ease-in-out; /* Match the timeout in JavaScript */
+    transform-origin: center; /* Scale from the center of the path */
+}
+
+
+#controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    margin-top: 30px;
+    padding: 10px;
+}
+
+#playStopButton img:hover {
+    transform: scale(1.1); /* Slight zoom on hover */
+    transition: transform 0.2s ease;
+}
+
+.toggle-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.toggle-button img {
+    display: block;
+}
+
+/* Global Settings Container */
+.global-settings__container {
+    border-radius: 5px;
+}
+
+/* Header Styling */
+.global-settings__header {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+}
+
+/* Content Layout */
+.global-settings__content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between items */
+}
+
+/* Individual Setting Items */
+.global-settings__item {
+    display: flex;
+    align-items: center;
+    /* justify-content: space-between; */
+    gap: 10px;
+}
+
+/* Button Styling */
+.global-settings__button {
+    max-width: 200px;
+    padding: 8px 12px;
+    font-size: 1em;
+    background-color: #7dd2d4;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+.sonificators__play-button {
+    max-width: none;
+}
+
+.global-settings__button:hover {
+    background-color: #68a5a6;
+    color: #000;
+}
+
+.reset-button {
+    background-color: #f44336; /* Red color */
+    color: white;
+}
+
+.reset-button:hover {
+    background-color: #d32f2f; /* Darker red on hover */
+}
+
+/* Checkbox and Label Styling */
+.global-settings__label {
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 8px;
+}
+
+.invertMappingCheckbox,
+.global-settings__checkbox {
+    transform: scale(1.2); /* Slightly enlarge the checkbox */
+    cursor: pointer;
+}
+
+/* Color Picker Styling */
+.global-settings__colorpicker {
+    cursor: pointer;
+    width: 50px;
+    height: 30px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Basic styles for the bottom menu */
+.bottom-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #f4f4f4;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease-in-out;
+    transform: translateY(100%); /* Hidden by default */
+    z-index: 1000;
+}
+
+/* Styles for the toggle button */
+.toggle-menu-button {
+    font-size: 50px;
+    position: absolute;
+    top: -90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0);
+    color: 000;
+    border: none;
+    border-radius: 90%;
+    padding: 40px;
+    cursor: pointer;
+    /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); */
+    transition: transform 0.3s ease;
+}
+
+/* Rotate the arrow when the menu is open */
+.toggle-menu-button.open {
+    transform: translateX(-50%) rotate(180deg);
+}
+
+#svg-characteristic-label-dash-array {
+    transition: opacity 0.3s ease, text-decoration 0.3s ease; /* Smooth transition for both */
+}
+
+#svg-characteristic-label-dash-array.inactive {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+#svg-characteristic-label-angle {
+    transition: opacity 0.3s ease, text-decoration 0.3s ease; /* Smooth transition for both */
+}
+
+#svg-characteristic-label-angle.inactive {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+/* Menu content styles */
+.menu-content {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    border-top: 0px;
+    border-style: solid;
+    padding:10px;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Menu visible state */
+.bottom-menu.open {
+    transform: translateY(0); /* Slide up into view */
+}
+
+/* Style for the question mark icon */
+.question-mark {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+    border-radius: 50%;
+    background-color: #007BFF;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 14px;
+}
+
+/* Modal background */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+}
+
+/* Modal content */
+.modal-content {
+    background-color: white;
+    margin: auto;
+    padding: 20px;
+    border-radius: 5px;
+    width: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-list {
+    text-align: left;
+}
+
+.modal-heading {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #005f73;
+}
+
+.modal-heading-h3{
+    text-align: left;
+}
+
+/* Close button */
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.waveform-container {
+    width: 100%;
+    height: 100px;
+    margin: 10px auto;
+    position: relative;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.granulator_container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Container styling */
+.file-upload-container {
+    width: 100%;
+    display: inline-block;
+    position: relative;
+}
+
+/* Hide the default file input */
+#audioFileInput {
+    display: none;
+}
+
+/* Custom file input styling */
+.custom-file-upload {
+    display: inline-block;
+    width: 100%;
+    padding: 10px 20px;
+    font-size: 16px;
+    color: #000;
+    background-color: #7dd2d4;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+/* Icon styling */
+.custom-file-upload i {
+    margin-right: 8px;
+}
+
+/* Hover effect */
+.custom-file-upload:hover {
+    background-color: #68a5a6;
+}
+
+.waveform-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+}
+
+.arrow-button {
+    background-color: rgba(255, 0, 0, 0);
+    border: none;
+    border-radius: 4px;
+    color: #000;
+    font-size: 1.5rem;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.waveform-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.waveform-display img {
+    width: 100px;
+    height: auto;
+    margin-bottom: 5px;
+}
+
+.waveform-display span {
+    font-size: 1.2rem;
+    color: #333;
+    font-weight: bold;
+}
+
+/* Styling for play and stop buttons */
+.synth-button {
+    width: 40%;
+    padding: 8px 12px;
+    font-size: 1em;
+    background-color: #7dd2d4;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    margin-right: 10px; /* Space between buttons */
+}
+
+.synth-button:hover {
+    background-color: #68a5a6;
+    color: #000;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.knob-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 20px;
+}
+
+#scaleKnob {
+    width: 120px;  /* Adjust knob size */
+    height: 120px; /* Adjust knob size */
+}
