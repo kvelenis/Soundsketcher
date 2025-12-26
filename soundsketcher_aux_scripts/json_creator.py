@@ -153,9 +153,10 @@ def creator(dir):
 
     
     # Calculate the z-score for each data point
-    zerocrossingrate_norm = [(x - median_zcr) / (1.349 * iqr(zerocrossingrate)) for x in zerocrossingrate]
+    eps = 1e-9
+    zerocrossingrate_norm = [(x - median_zcr) / (1.349 * iqr(zerocrossingrate) + eps) for x in zerocrossingrate]
     # Scale the z-scores from 0 to 90
-    zerocrossingrate_norm_scaled = scale_array(zerocrossingrate_norm, 0, 45) 
+    zerocrossingrate_norm_scaled = scale_array(zerocrossingrate_norm, 0, 45)
     # print("MAX: ",max(zerocrossingrate_norm_scaled))
     # print("MAX: ",max(zerocrossingrate_norm))
 
@@ -199,108 +200,185 @@ def creator(dir):
     # print(json_data)
     return json_data
 
+#! New much simpler version
 def creator_librosa(features):
-    # Extract individual features from the in-memory dictionary
-    timestamp = features['timestamp']
-    amplitude = features['rms']
-    spectral_centroid = features['spectral_centroid']
-    spectral_flux = features['spectral_flux']
-    zerocrossingrate = features['zcr']
-    spectral_flatness = features['spectral_flatness']
-    f0 = features['f0_librosa']  # Librosa's F0
-    voiced_prob = features['voiced_prob']  # Optional: Add voiced probability
-    spectral_bandwidth = features['spectral_bandwidth']
-    aubio_f0 = features.get('aubio_f0', [])  # Handle Aubio F0 safely
-    crepe_f0 = features.get('crepe_f0', [])  # Handle CREPE F0
-    crepe_confidence = features.get('crepe_confidence', [])  # Handle CREPE confidence
-    yin_periodicity = features['yin_periodicity']
-    f0_candidates = features['f0_candidates']
-    loudness = features['loudness']
-    sharpness = features['sharpness']
-    # roughness = features.get['roughness'∫]
-    print(f0_candidates)
-    # Helper functions
-    def normalize(data):
-        min_val = min(data)
-        max_val = max(data)
-        return [(x - min_val) / (max_val - min_val) for x in data]
 
-    def median(lst):
-        sorted_lst = sorted(lst)
-        n = len(sorted_lst)
-        mid = n // 2
-        return (sorted_lst[mid - 1] + sorted_lst[mid]) / 2 if n % 2 == 0 else sorted_lst[mid]
+    N = len(features["timestamp"])
+    features_per_timestamp = [{key : value[i] for key,value in features.items()} for i in range(N)]
+    general_info = {} # Not sure if we even need this
 
-    def scale_array(array, min_value, max_value):
-        array_min = min(array)
-        array_max = max(array)
-        scaling_factor = (max_value - min_value) / (array_max - array_min)
-        offset = min_value - array_min * scaling_factor
-        return [value * scaling_factor + offset for value in array]
-
-    # Median and IQR calculations
-    median_amplitude = median(amplitude)
-    median_spectral_centroid = median(spectral_centroid)
-    median_zcr = median(zerocrossingrate)
-    median_spectral_flux = median(spectral_flux)
-    median_flatness = median(spectral_flatness)
-    # median_f0_librosa = median(f0[f0 > 0]) if any(f0 > 0) else 0  # Exclude unvoiced (zeros)
-    # median_aubio_f0 = median(aubio_f0) if aubio_f0 else 0  # Handle empty Aubio F0
-    # median_crepe_f0 = median(crepe_f0) if crepe_f0 else 0  # Handle empty CREPE F0
-
-    # Z-score normalization for ZCR
-    zerocrossingrate_norm = [(x - median_zcr) / (1.349 * iqr(zerocrossingrate)) for x in zerocrossingrate]
-    zerocrossingrate_norm_scaled = scale_array(zerocrossingrate_norm, 0, 45)
-
-    # # Visualization (optional)
-    # plt.plot(zerocrossingrate_norm_scaled)
-    # plt.xlabel('Index')
-    # plt.ylabel('Value')
-    # plt.title('Line Chart (ZCR)')
-    # plt.savefig('zcr_chart.png')
-
-    # Construct JSON data
-    json_data = {
-        "Song": {
-            "features_per_timestamp": [],
-            "general_info": {
-                "median_amplitude": median_amplitude,
-                "median_spectral_centroid": median_spectral_centroid,
-                "median_zcr": median_zcr,
-                "median_spectral_flux": median_spectral_flux,
-                "median_flatness": median_flatness,
-                # "median_f0_librosa": median_f0_librosa,
-                # "median_f0_aubio": median_aubio_f0,
-                # "median_f0_crepe": median_crepe_f0,
-                "iqr_zcr": iqr(zerocrossingrate),
-            }
-        }
-    }
-
-    # Combine features per timestamp
-    for tms, amp, centroid, zcr, flux, flatness, f0_val, voiced_prob_val, bandwidth, aubio_f0_val, crepe_f0_val, crepe_conf_val, periodicity, f0_cand, loud, sharp in zip(
-        timestamp, amplitude, spectral_centroid, zerocrossingrate_norm_scaled,
-        spectral_flux, spectral_flatness, f0, voiced_prob, spectral_bandwidth,
-        aubio_f0, crepe_f0, crepe_confidence, yin_periodicity, f0_candidates, loudness, sharpness
-    ):
-        json_data["Song"]["features_per_timestamp"].append({
-            "timestamp": tms,
-            "amplitude": amp,
-            "spectral_centroid": centroid,
-            "zerocrossingrate": zcr,
-            "spectral_flux": flux,
-            "spectral_flatness": flatness,
-            "yin_f0_librosa": f0_val,
-            "voiced_prob": voiced_prob_val,
-            "yin_f0_aubio": aubio_f0_val,
-            "crepe_f0": crepe_f0_val,
-            "crepe_confidence": crepe_conf_val,
-            "spectral_bandwidth": bandwidth,
-            "brightness": (centroid + flux + zcr) / 3,
-            "yin_periodicity": periodicity,
-            "f0_candidates": f0_cand,
-            "loudness": loud,
-            "sharpness": sharp
-        })
-
+    json_data = {"Song": {"features_per_timestamp": features_per_timestamp,
+                                    "general_info": general_info}}
+    
     return json_data
+
+#! [DEPRECATED] Disabled old features | Added derived features
+# def creator_librosa(features):
+#     # Extract individual features from the in-memory dictionary
+#     timestamp = features.get('timestamp',[])
+#     # amplitude = features['rms']
+#     spectral_centroid = features.get('spectral_centroid',[])
+#     # spectral_flux = features['spectral_flux']
+#     # zerocrossingrate = features['zcr']
+#     # spectral_flatness = features['spectral_flatness']
+#     # f0 = features['f0_librosa']  # Librosa's F0
+#     # voiced_prob = features['voiced_prob']  # Optional: Add voiced probability
+#     # spectral_bandwidth = features['spectral_bandwidth']
+#     # spectral_peak = features['spectral_peak']
+#     # spectral_peak_prominence_db = features['spectral_peak_prominence_db']
+#     # spectral_peak_prominence_norm = features['spectral_peak_prominence_norm']
+#     # multipeak_centroid = features['multipeak_centroid']
+#     # aubio_f0 = features.get('aubio_f0', [])  # Handle Aubio F0 safely
+#     crepe_f0 = features.get('crepe_f0',[])  # Handle CREPE F0
+#     crepe_confidence = features.get('crepe_confidence',[])  # Handle CREPE confidence
+#     yin_periodicity = features.get('yin_periodicity',[])
+#     # f0_candidates = features['f0_candidates']
+#     loudness = features.get('loudness',[])
+#     sharpness = features.get('sharpness',[])
+#     # roughness = features.get['roughness']
+#     # MIR features (safe .get with fallback to empty list)
+#     mir_mps = features.get("mir_mps_roughness",[])
+#     # mir_zwicker_rough = features.get("mir_roughness_zwicker", [])
+#     mir_zwicker_sharp = features.get("mir_sharpness_zwicker",[])
+#     mir_vassilakis = features.get("mir_roughness_vassilakis",[])
+#     # mir_sethares = features.get("mir_roughness_sethares", [])
+#     weighted_spectral_centroid = features.get("weighted_spectral_centroid",[])
+
+#     # print(f0_candidates)
+    
+#     # Helper functions
+#     # def normalize(data):
+#     #     min_val = min(data)
+#     #     max_val = max(data)
+#     #     return [(x - min_val) / (max_val - min_val) for x in data]
+
+#     def median(lst):
+#         sorted_lst = sorted(lst)
+#         n = len(sorted_lst)
+#         mid = n // 2
+#         return (sorted_lst[mid - 1] + sorted_lst[mid]) / 2 if n % 2 == 0 else sorted_lst[mid]
+
+#     # def scale_array(array, min_value, max_value):
+#     #     array_min = min(array)
+#     #     array_max = max(array)
+#     #     scaling_factor = (max_value - min_value) / (array_max - array_min)
+#     #     offset = min_value - array_min * scaling_factor
+#     #     return [value * scaling_factor + offset for value in array]
+
+#     # Median and IQR calculations
+#     # median_amplitude = median(amplitude)
+#     median_spectral_centroid = median(spectral_centroid)
+#     # median_zcr = median(zerocrossingrate)
+#     # median_spectral_flux = median(spectral_flux)
+#     # median_flatness = median(spectral_flatness)
+#     # median_f0_librosa = median(f0[f0 > 0]) if any(f0 > 0) else 0  # Exclude unvoiced (zeros)
+#     # median_aubio_f0 = median(aubio_f0) if aubio_f0 else 0  # Handle empty Aubio F0
+#     median_crepe_f0 = median(crepe_f0) if len(crepe_f0) != 0 else 0  # Handle empty CREPE F0
+
+#     # Z-score normalization for ZCR
+#     # zerocrossingrate_norm = [(x - median_zcr) / (1.349 * iqr(zerocrossingrate)) for x in zerocrossingrate]
+#     # zerocrossingrate_norm_scaled = scale_array(zerocrossingrate_norm, 0, 45)
+
+#     # # Visualization (optional)
+#     # plt.plot(zerocrossingrate_norm_scaled)
+#     # plt.xlabel('Index')
+#     # plt.ylabel('Value')
+#     # plt.title('Line Chart (ZCR)')
+#     # plt.savefig('zcr_chart.png')
+
+#     # Construct JSON data
+#     json_data = {
+#         "Song": {
+#             "features_per_timestamp": [],
+#             "general_info": {
+#                 # "median_amplitude": median_amplitude,
+#                 "median_spectral_centroid": median_spectral_centroid,
+#                 # "median_zcr": median_zcr,
+#                 # "median_spectral_flux": median_spectral_flux,
+#                 # "median_flatness": median_flatness,
+#                 # "median_f0_librosa": median_f0_librosa,
+#                 # "median_f0_aubio": median_aubio_f0,
+#                 "median_crepe_f0": median_crepe_f0,
+#                 # "iqr_zcr": iqr(zerocrossingrate),
+#             }
+#         }
+#     }
+
+#     #! Added these
+#     def adjustPeriodicity(yin_periodicity,threshold = 0.85):
+#             return 1 if yin_periodicity > threshold else 0
+#     def perceivedPitchF0OrSC(periodicity,crepeF0,sc):
+#         toggle = adjustPeriodicity(periodicity)
+#         return crepeF0*toggle + sc*(1 - toggle)*0.3
+
+#     for (tms,centroid,crepe_f0_val,crepe_conf_val,periodicity,loud,sharp,mir_mps_val,mir_zw_s,mir_vas,sc_weighted) \
+#     in zip(timestamp,spectral_centroid,crepe_f0, crepe_confidence, yin_periodicity,loudness, sharpness, mir_mps,mir_zwicker_sharp, mir_vassilakis, weighted_spectral_centroid):
+#         json_data["Song"]["features_per_timestamp"].append(
+#         {
+#             "timestamp": tms,
+#             # "amplitude": amp,
+#             "spectral_centroid": centroid,
+#             # "spectral_peak": spectral_p,
+#             # "spectral_peak_prominence_db": spectral_peak_pr_db,
+#             # "spectral_peak_prominence_norm": spectral_peak_pr_norm,
+#             # "multipeak_centroid": multipeak_centroid_val,
+#             # "zerocrossingrate": zcr,
+#             # "spectral_flux": flux,
+#             # "spectral_flatness": flatness,
+#             # "yin_f0_librosa": f0_val,
+#             # "voiced_prob": voiced_prob_val,
+#             # "yin_f0_aubio": aubio_f0_val,
+#             "crepe_f0": crepe_f0_val,
+#             "crepe_confidence": crepe_conf_val,
+#             # "spectral_bandwidth": bandwidth,
+#             # "brightness": (centroid + flux + zcr) / 3,
+#             "yin_periodicity": periodicity,
+#             # "f0_candidates": f0_cand,
+#             "loudness": loud,
+#             "sharpness": sharp,
+#             # MIR additions
+#             "mir_mps_roughness": mir_mps_val,
+#             # "mir_roughness_zwicker": mir_zw_r,
+#             "mir_sharpness_zwicker": mir_zw_s,
+#             "mir_roughness_vassilakis": mir_vas,
+#             # "mir_roughness_sethares": mir_seth, 
+#             "weighted_spectral_centroid": sc_weighted,
+#             #! Derived features
+#             "loudness_periodicity": loud * (1 - periodicity),
+#             "loudness_pitchConf": loud * (1 - crepe_conf_val),
+#             "perceived_pitch_f0_or_SC_weighted": perceivedPitchF0OrSC(periodicity,crepe_f0_val,sc_weighted)
+#         })
+
+#     # for (tms, amp, centroid, zcr, flux, flatness, f0_val, voiced_prob_val, bandwidth, spectral_p, spectral_peak_pr_db, spectral_peak_pr_norm, multipeak_centroid_val, aubio_f0_val, crepe_f0_val, crepe_conf_val, periodicity, f0_cand, loud, sharp, mir_mps_val, mir_zw_r, mir_zw_s, mir_vas, mir_seth, sc_weighted) in zip(timestamp, amplitude, spectral_centroid, zerocrossingrate_norm_scaled, spectral_flux, spectral_flatness, f0, voiced_prob, spectral_bandwidth, spectral_peak, spectral_peak_prominence_db, spectral_peak_prominence_norm, multipeak_centroid, aubio_f0, crepe_f0, crepe_confidence, yin_periodicity, f0_candidates, loudness, sharpness, mir_mps, mir_zwicker_rough, mir_zwicker_sharp, mir_vassilakis, mir_sethares, weighted_spectral_centroid):
+#     #     json_data["Song"]["features_per_timestamp"].append({
+#     #         "timestamp": tms,
+#     #         "amplitude": amp,
+#     #         "spectral_centroid": centroid,
+#     #         "spectral_peak": spectral_p,
+#     #         "spectral_peak_prominence_db": spectral_peak_pr_db,
+#     #         "spectral_peak_prominence_norm": spectral_peak_pr_norm,
+#     #         "multipeak_centroid": multipeak_centroid_val,
+#     #         "zerocrossingrate": zcr,
+#     #         "spectral_flux": flux,
+#     #         "spectral_flatness": flatness,
+#     #         "yin_f0_librosa": f0_val,
+#     #         "voiced_prob": voiced_prob_val,
+#     #         "yin_f0_aubio": aubio_f0_val,
+#     #         "crepe_f0": crepe_f0_val,
+#     #         "crepe_confidence": crepe_conf_val,
+#     #         "spectral_bandwidth": bandwidth,
+#     #         "brightness": (centroid + flux + zcr) / 3,
+#     #         "yin_periodicity": periodicity,
+#     #         "f0_candidates": f0_cand,
+#     #         "loudness": loud,
+#     #         "sharpness": sharp,
+#     #         # MIR additions
+#     #         "mir_mps_roughness": mir_mps_val,
+#     #         "mir_roughness_zwicker": mir_zw_r,
+#     #         "mir_sharpness_zwicker": mir_zw_s,
+#     #         "mir_roughness_vassilakis": mir_vas,
+#     #         "mir_roughness_sethares": mir_seth, 
+#     #         "weighted_spectral_centroid": sc_weighted,
+#     #     })
+
+#     return json_data

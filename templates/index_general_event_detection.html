@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Descriptor Analysis with Event Detection</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Audio Descriptor Analysis and Event Detection</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <div>
+            <label for="audio-file">Upload Audio File:</label>
+            <input type="file" id="audio-file" name="file" accept="audio/*" required>
+        </div>
+
+        <div>
+            <label for="general-descriptors">General Descriptors (comma-separated):</label>
+            <input type="text" id="general-descriptors" name="general_descriptors" placeholder="e.g., bright, dark, granular, smooth" required>
+        </div>
+
+        <div>
+            <label for="specific-descriptors">Specific Descriptors (comma-separated):</label>
+            <input type="text" id="specific-descriptors" name="specific_descriptors" placeholder="e.g., fire, liquid, factory, pitched" required>
+        </div>
+
+        <button type="submit">Analyze</button>
+    </form>
+
+    <div>
+        <h2>Audio Playback and Similarity Plot</h2>
+        <audio id="audio-player" controls style="display: none;">
+            <source id="audio-source" type="audio/wav">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="plot"></div>
+    </div>
+
+    <script>
+        let classificationData;
+        let unifiedMetric;
+        let eventBoundaries;
+        let highestSpecificSimilarity;
+        let onsetTimes;
+        const colorMap = {};
+
+        document.getElementById("upload-form").onsubmit = async function(event) {
+            event.preventDefault();
+
+            const generalDescriptors = document.getElementById('general-descriptors').value.trim();
+            const specificDescriptors = document.getElementById('specific-descriptors').value.trim();
+
+            // Check if fields are empty
+            if (!generalDescriptors || !specificDescriptors) {
+                alert('Please enter both general and specific descriptors.');
+                return;
+            }
+
+            console.log("General Descriptors:", generalDescriptors);
+            console.log("Specific Descriptors:", specificDescriptors);
+
+            const formData = new FormData(event.target);
+            const response = await fetch("/upload/", {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                classificationData = result.general_similarities;
+                unifiedMetric = result.unified_metric;
+                eventBoundaries = result.event_boundaries;
+                highestSpecificSimilarity = result.highest_specific_similarity;
+                onsetTimes = result.onset_times;  // Get onset times
+
+                assignColors(classificationData);
+                renderPlot(classificationData, unifiedMetric, eventBoundaries, highestSpecificSimilarity, onsetTimes);
+
+                // Load and play audio
+                const audioFile = formData.get('file');
+                const audioURL = URL.createObjectURL(audioFile);
+                document.getElementById('audio-source').src = audioURL;
+                const audioPlayer = document.getElementById('audio-player');
+                audioPlayer.style.display = 'block';
+                audioPlayer.load();
+                audioPlayer.addEventListener('timeupdate', () => updatePlot(audioPlayer.currentTime));
+            } else {
+                alert("Failed to analyze audio file.");
+            }
+        };
+
+        function assignColors(plotData) {
+            const colors = Plotly.d3.scale.category10().range();
+            let colorIndex = 0;
+            for (let label in plotData) {
+                colorMap[label] = colors[colorIndex % colors.length];
+                colorIndex++;
+            }
+        }
+
+        function renderPlot(plotData, unifiedMetric, eventBoundaries, prominentLabels, onsetTimes) {
+            const chunkDuration = 1;  // Each chunk is 1 second long
+            const overlap = 0.5;  // 0.5 second overlap
+            const traces = [];
+
+            console.log("Plot Data:", plotData);
+            console.log("Unified Metric:", unifiedMetric);
+            console.log("Event Boundaries:", eventBoundaries);
+            console.log("Prominent Labels:", prominentLabels);
+            console.log("Onset Times:", onsetTimes);  // Onset times
+
+            if (!plotData || !unifiedMetric || !eventBoundaries || !prominentLabels) {
+                alert("Invalid data for plotting. Please check the response from the backend.");
+                return;
+            }
+
+            // Plot the general similarities
+            for (let label in plotData) {
+                if (plotData[label]) {
+                    const timePoints = plotData[label].map((_, idx) => idx * (chunkDuration - overlap));
+                    traces.push({
+                        x: timePoints,
+                        y: plotData[label],
+                        mode: 'lines',
+                        name: `General: ${label}`,
+                        line: { color: colorMap[label], shape: 'spline' }
+                    });
+                }
+            }
+
+            // Unified Metric
+            if (unifiedMetric && unifiedMetric.length > 0) {
+                const unifiedTimePoints = Array.from(Array(unifiedMetric.length).keys()).map(idx => idx * (chunkDuration - overlap));
+                traces.push({
+                    x: unifiedTimePoints,
+                    y: unifiedMetric,
+                    mode: 'lines',
+                    name: 'Unified Metric',
+                    line: { color: 'black', dash: 'dot' }
+                });
+            }
+
+            // Mark event boundaries
+            if (eventBoundaries && eventBoundaries.length > 0) {
+                for (let i = 0; i < eventBoundaries.length; i++) {
+                    const eventTime = eventBoundaries[i] * (chunkDuration - overlap);
+                    traces.push({
+                        x: [eventTime, eventTime],
+                        y: [0, 1],
+                        mode: 'lines',
+                        line: { color: 'red', width: 2, dash: 'dash' },
+                        name: `Event ${i + 1}: ${prominentLabels[i]}`
+                    });
+                }
+            }
+
+            // Plot onset times
+            if (onsetTimes && onsetTimes.length > 0) {
+                for (let i = 0; i < onsetTimes.length; i++) {
+                    traces.push({
+                        x: [onsetTimes[i], onsetTimes[i]],
+                        y: [0, 1],
+                        mode: 'lines',
+                        line: { color: 'blue', width: 2, dash: 'dot' },
+                        name: `Onset ${i + 1}`
+                    });
+                }
+            }
+
+            const layout = {
+                title: 'Similarity Plot with Event Detection and Onset Times',
+                width: window.innerWidth * 3,  // Make the plot 3 times wider
+                xaxis: { title: 'Time (s)', showgrid: true },
+                yaxis: { title: 'Cosine Similarity / Unified Metric', range: [0, 1] },
+                shapes: [] // This will be updated with the moving cursor
+            };
+
+            Plotly.newPlot('plot', traces, layout);
+        }
+
+        function updatePlot(currentTime) {
+            const currentSeconds = currentTime.toFixed(2);
+
+            // Update moving cursor
+            Plotly.relayout('plot', {
+                shapes: [{
+                    type: 'line',
+                    x0: currentSeconds,
+                    x1: currentSeconds,
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    line: {
+                        color: 'blue',
+                        width: 2
+                    }
+                }]
+            });
+        }
+    </script>
+</body>
+</html>

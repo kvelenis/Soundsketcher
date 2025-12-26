@@ -1,0 +1,292 @@
+function [MPS_roughness, roughness_Zwicker, sharpness_Zwicker, ...
+          roughness_vassilakis, roughness_sethares, ...
+          time_MPS, time_Zwicker, time_vassilakis, time_sethares, ...
+          brightness, inharmonicity, keystrength, tonalcentroid, pitch, ...
+          time_brightness, time_inharmonicity, time_keystrength, time_tonalcentroid, time_pitch] = ...
+          roughnessTimeSeries(folderPath)
+
+%folderPath = '/Users/Asteris/Documents/MATLAB/Soundsketcher/vlaikidou';  % Replace with your folder path
+
+% Get a list of all .wav and .mp3 files in the folder
+audioFiles = dir(fullfile(folderPath, '*.wav')); % Get all WAV files
+audioFiles = [audioFiles; dir(fullfile(folderPath, '*.mp3'))]; % Get all MP3 files
+audioFiles = [audioFiles; dir(fullfile(folderPath, '*.flac'))]; % Get all Flac files
+
+% calib = 98; %calibration level
+
+wavfiles = {audioFiles.name};
+
+% Sort filenames naturally
+wavfiles = sort_nat(wavfiles)';
+numFiles = length(wavfiles); % Number of audio files
+
+%%%%% features of spectrogram calculation through the MIR Toolbox %%%%%%%%
+winsize = 0.04;
+% hop = winsize/2;
+
+%%%%% Define the frequency range for energy calculation %%%%
+freqMin = 30;  % Lower bound of frequency (30 Hz)
+freqMax = 150;  % Upper bound of frequency (150 Hz)
+
+% Initialize arrays to store energy values and corresponding labels
+% MPS_roughness = [];  % Total energy array
+% roughness = [];
+% sharpness = [];
+energyLabels = {};  % Array to store the labels (sound names)
+
+% Preallocate a vector to store total energy for each sound
+MPS_roughness = cell(length(wavfiles), 1);
+roughness_Zwicker = cell(length(wavfiles), 1);
+sharpness_Zwicker = cell(length(wavfiles), 1);
+roughness_vassilakis = cell(numFiles, 1);
+roughness_sethares = cell(numFiles, 1);
+
+brightness        = cell(numFiles, 1);
+inharmonicity     = cell(numFiles, 1);
+keystrength       = cell(numFiles, 1);
+tonalcentroid     = cell(numFiles, 1);
+pitch             = cell(numFiles, 1);
+
+time_brightness        = cell(numFiles, 1);
+time_inharmonicity     = cell(numFiles, 1);
+time_keystrength       = cell(numFiles, 1);
+time_tonalcentroid     = cell(numFiles, 1);
+time_pitch             = cell(numFiles, 1);
+time_MPS               = cell(numFiles, 1);
+
+% Initialize an array to store the energies and their corresponding labels
+
+ % Set the duration to extract (0.3 seconds)
+startTime = 0.001;  % Start time in seconds
+endTime = 0.25;    % End time in seconds
+
+timeStep = 2e-3; % 2 ms hop size (default for ISO 532-1) - acousticLoudness
+fs_mod = 1 / timeStep; % Compute modulation sampling rate
+fs = 44100; % Sampling frequency
+
+barkBins = 0.1:0.1:24;
+hzBins = bark2hz(barkBins);
+
+%%
+
+for i = 1:length(wavfiles)
+    % Combine folder path with file name
+    filepath = fullfile(folderPath, wavfiles{i});
+    
+    % Check if the file exists
+    if ~isfile(filepath)
+        error('File not found: %s', filepath);
+    end
+    
+    % Read the audio file
+ 
+% Read the first ... seconds of the audio file
+    % [a, fs] = audioread(filepath, [round(startTime * fs), round(endTime * fs)]);  
+        [a, fs] = audioread(filepath);    
+
+    % Check if the audio is stereo
+if size(a, 2) > 1
+    a = mean(a, 2); % Convert stereo to mono by averaging the channels
+end
+    
+% Compute roughness using the MIR Toolbox
+    mirR_1 = mirroughness(filepath, 'Frame', winsize, 's', 50 , '%', 'Vassilakis');  
+    roughness_vassilakis_ = mirgetdata(mirR_1);
+
+     mirR_2 = mirroughness(filepath, 'Frame', winsize, 's', 50 , '%', 'Sethares');  
+    roughness_sethares_ = mirgetdata(mirR_2);
+    time_vassilakis{i} = get(mirR_1, 'FramePos');
+    time_vassilakis{i} = time_vassilakis{i}{1};  % unwrap the cell
+
+    time_sethares{i}   = get(mirR_2, 'FramePos');
+    time_sethares{i} = time_sethares{i}{1};      % unwrap the cell
+
+        %% --- Brightness ---
+    mirB = mirbrightness(filepath, 'Frame', winsize, 's', 50);
+    brightness_ = mirgetdata(mirB);
+    time_brightness{i} = get(mirB, 'FramePos'); 
+    time_brightness{i} = time_brightness{i}{1};
+    brightness{i} = brightness_;
+
+    %% --- Inharmonicity ---
+    mirI = mirinharmonicity(filepath, 'Frame', winsize, 's', 50);
+    inharmonicity_ = mirgetdata(mirI);
+    time_inharmonicity{i} = get(mirI, 'FramePos'); 
+    time_inharmonicity{i} = time_inharmonicity{i}{1};
+    inharmonicity{i} = inharmonicity_;
+
+    % mirK = mirkey(filepath, 'Frame', winsize, 's', 50);
+    % keystrength_ = mirgetdata(mirK);
+    % time_keystrength{i} = get(mirK, 'FramePos'); 
+    % time_keystrength{i} = time_keystrength{i}{1};
+    % keystrength{i} = keystrength_;    
+
+    %% --- Tonal Centroid ---
+    mirT = mirtonalcentroid(filepath, 'Frame', winsize, 's', 50);
+    tonalcentroid_ = mirgetdata(mirT);
+    time_tonalcentroid{i} = get(mirT, 'FramePos'); 
+    time_tonalcentroid{i} = time_tonalcentroid{i}{1};
+    tonalcentroid{i} = tonalcentroid_;
+
+    %% --- Pitch ---
+    mirP = mirpitch(filepath, 'Frame', winsize, 's', 50);
+    pitch_ = mirgetdata(mirP);
+    time_pitch{i} = get(mirP, 'FramePos'); 
+    time_pitch{i} = time_pitch{i}{1};
+    pitch{i} = pitch_;
+
+%%%%%% calculate time varying specific loudness using the Zwicker Loudness model %%%%%
+    [~,specificLoudness] = acousticLoudness(a,fs,'TimeVarying', true);
+    roughnessVec = acousticRoughness(specificLoudness);
+    sharpnessVec = acousticSharpness(specificLoudness,'TimeVarying',true);
+
+%%%%%% define spectral resolution %%%%%%%
+    %Number of spectral bins (Bark bands)
+N_spectralBins = size(specificLoudness, 1);
+
+% Define Bark scale frequency limits
+f_low = hzBins(1); % Lower bound (Hz)
+f_high = hzBins(end); % Upper bound (Hz)
+
+% Convert to octaves relative to 1 kHz
+low_oct = log2(f_low / 1000); 
+high_oct = log2(f_high / 1000);
+
+% Compute frequency range in octaves
+octave_range = high_oct - low_oct;
+
+% Compute frequency spacing in cycles/octave
+cycles_per_octave = N_spectralBins / octave_range;
+
+% Display result
+% fprintf('Number of spectral bins: %d\n', N_spectralBins);
+% fprintf('Total range: %.2f octaves\n', octave_range);
+% fprintf('Frequency spacing: %.2f cycles/octave\n', cycles_per_octave);
+
+    %%%%%%% mirspectrum from MIR Toolbox %%%%%%%%%%%%
+    % a = mean(a, 2); % Convert to mono
+    % 
+    % s = mirspectrum(miraudio(a), 'Frame', overlap, hop, 'Min', 20, 'MinRes', 5, 'Terhardt', 'Normalinput', 'MinGate', 0.001);
+    % f = get(s, 'Frequency'); 
+    % f = f{1}{1}(:,1)';
+    % d = get(s, 'Magnitude');
+    % d = d{1}{1};
+    % d = d / length(f); % Normalize (verify if necessary)
+    % 
+    % nt = length(d(1,:));
+    % t = (winsize * overlap) * (0:(nt - 1));
+    % [T, F] = meshgrid(t, f);
+    
+    %plot spectrograms
+    % 
+
+    [s1, s2] = size(specificLoudness);
+
+% % Define time axis
+
+t = 0:2e-3:2e-3*(size(specificLoudness,1)-1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% window2D = hamming(size(specificLoudness,1)) * hamming(size(specificLoudness,2))';
+% % window2D = ones(size(specificLoudness)); % No windowing
+% 
+% specificLoudness = specificLoudness .* window2D;
+
+%%%% Interpolate to a Uniform Frequency Grid
+linearHz = linspace(min(hzBins), max(hzBins), length(hzBins)); % Keep same size
+specificLoudness = interp1(hzBins, specificLoudness.', linearHz, 'linear', 'extrap').';
+
+windowSize = 2; % number of time points in the window (20 × 2ms = 40ms)
+nTimePoints = size(specificLoudness, 1);
+nWindows = floor(nTimePoints / windowSize);
+
+totalE = zeros(1, nWindows); % preallocate
+
+frame_hop = windowSize * timeStep;  % 40 ms
+timeVecs{i} = (0:nWindows-1) * frame_hop;
+
+for w = 1:nWindows
+    idx_start = (w-1)*windowSize + 1;
+    idx_end = w*windowSize;
+    
+    % Select the loudness slice for this window
+    loudness_window = specificLoudness(idx_start:idx_end,:);
+    
+    % Calculate MPS
+    mps_local = fftshift(fft2(loudness_window'));
+    mpsPower_local = abs(mps_local).^2;
+    
+    % Get number of modulation frequency bins
+    numFreqBins = size(mpsPower_local, 2);
+    modFreqAxisFFT = linspace(-fs_mod/2, fs_mod/2, numFreqBins);
+    
+    % Define frequency indices
+    freqIndices = (modFreqAxisFFT >= freqMin) & (modFreqAxisFFT <= freqMax);
+    
+    % Select region
+    mpsRegion = mpsPower_local(:, freqIndices);
+    
+    % Safeguard against NaN or empty selections
+    if isempty(mpsRegion) || all(isnan(mpsRegion(:)))
+        totalE(w) = 0;  % Or use NaN if you want to preserve invalid segments
+    else
+        totalE(w) = mean(mpsRegion(:), 'omitnan');
+    end
+end
+ 
+     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Calculate the total energy of the MPS within 30-150 Hz 
+% Only for positive spectral frequencies (cycles/octave)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% % Get number of modulation frequency bins
+% numFreqBins = size(mpsPower, 2);
+% 
+% % Define the true FFT-based modulation frequency axis
+% modFreqAxisFFT = linspace(-fs_mod/2, fs_mod/2, numFreqBins);
+% 
+% % Get indices for the modulation frequency range 30-150 Hz
+% freqIndices = (modFreqAxisFFT >= freqMin) & (modFreqAxisFFT <= freqMax);
+% 
+% % take the 0-30 Hz part of the x-axis
+% freqIndices2 = (modFreqAxisFFT >= 1) & (modFreqAxisFFT <= freqMin); %from 1 to remove DC
+% 
+% % Define spectral frequency axis (cycles/octave)
+% numSpectralBins = size(mpsPower, 1);
+% spectralAxis = linspace(-5, 5, numSpectralBins);  % Adjust range if needed
+% 
+% % Keep only positive spectral frequencies
+% positiveIdx = spectralAxis >= 0;
+% mpsPositive = mpsPower(positiveIdx, :);  % Select positive part
+% 
+%     % Extract the MPS power values within the selected frequency range
+%     mpsRegion = mpsPower(:, freqIndices);
+%      % mpsRegion = mpsPower_n(:, freqIndices);
+%     mpsRegion2 = mpsPower(:, freqIndices2);
+% 
+% 
+%     % Calculate the total energy (sum) within this region by summing over the y-axis (spectral axis)
+%     MPS_roughness(i) = mean(mpsRegion(:));  % Sum all values within the region
+% 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % … compute roughnessVec (1×T), sharpnessVec (1×T), totalE (1×T) …
+    roughness_Zwicker{i} = roughnessVec';
+    sharpness_Zwicker{i} = sharpnessVec';
+    MPS_roughness{i} = totalE; 
+    roughness_vassilakis{i} = roughness_vassilakis_;
+    roughness_sethares{i} = roughness_sethares_;
+
+    % Add this line here:
+    time_MPS{i} = (0:length(totalE)-1) * (windowSize * timeStep);
+
+    % Time axis for Zwicker-based features (2 ms hop)
+    time_Zwicker{i} = (0:length(roughnessVec)-1) * timeStep;
+
+    % Time axis for MPS roughness (40 ms hop)
+    time_MPS{i} = (0:length(totalE)-1) * (windowSize * timeStep);
+
+end

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Αποτελέσματα - Ταίριασμα Σχήματος</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.1.min.js"></script>
+  <style>
+    body { font-family: Helvetica, sans-serif; padding: 20px; background: #f5f5f5; }
+    .plot-container { max-width: 700px; margin: 40px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center;">Αποτελέσματα Ερωτηματολογίου Σχήματος</h1>
+  <div id="chartsContainer"></div>
+
+  <script>
+    async function loadResults() {
+      const response = await fetch('/get_all_responses_shape');
+      const data = await response.json();
+      console.log("DATA", data)
+      const grouped = {};
+      data.forEach(entry => {
+        if (!entry.sound || !entry.response) return;
+        const sound = entry.sound.trim();
+        if (!grouped[sound]) grouped[sound] = [];
+        grouped[sound].push(entry.response);
+      });
+
+      const container = document.getElementById("chartsContainer");
+
+      Object.entries(grouped).forEach(([sound, responses]) => {
+        const shapeValues = responses
+          .map(r => Number(r.textureValue))
+          .filter(v => !isNaN(v));
+
+        if (!shapeValues.length) return;
+
+        // Bin the values
+        const bins = {};
+        shapeValues.forEach(v => {
+          const b = Math.round(v / 10) * 10;
+          bins[b] = (bins[b] || 0) + 1;
+        });
+
+        const x = Object.keys(bins).map(Number).sort((a, b) => a - b);
+        const y = x.map(k => bins[k]);
+
+        const chartDiv = document.createElement("div");
+        chartDiv.className = "plot-container";
+        container.appendChild(chartDiv);
+
+        Plotly.newPlot(chartDiv, [{
+          x: shapeValues,
+          type: 'histogram',
+          xbins: {
+            start: 0,
+            end: 100,
+            size: 1 // each bin = 5 units wide
+          },
+          marker: { color: '#3D4574' }
+        }], {
+          title: `Σχήμα που επιλέχθηκε για: ${sound}`,
+          xaxis: {
+            title: 'Τιμή Σχήματος (0–100)',
+            range: [0, 100],
+            dtick: 10
+          },
+          yaxis: { title: 'Απαντήσεις', rangemode: 'tozero' }
+        });
+      });
+    }
+
+    loadResults();
+  </script>
+</body>
+</html>

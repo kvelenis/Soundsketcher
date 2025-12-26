@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Clustering Visualization</title>
+    <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
+</head>
+<body>
+    <h1>Audio Clustering and Visualization</h1>
+    <!-- File upload form -->
+    <form id="uploadForm">
+        <label for="audioFile">Upload Audio File (WAV): </label>
+        <input type="file" id="audioFile" name="audioFile" accept=".wav" required>
+        <button type="submit">Upload and Process</button>
+    </form>
+
+    <!-- Plot container -->
+    <div id="plot" style="width:100%;height:100%;"></div>
+
+    <script>
+        const uploadForm = document.getElementById("uploadForm");
+        const plotDiv = document.getElementById("plot");
+
+        uploadForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            // Get the selected file
+            const audioFile = document.getElementById("audioFile").files[0];
+            if (!audioFile) {
+                alert("Please select a WAV file to upload.");
+                return;
+            }
+
+            // Create FormData to send the file
+            const formData = new FormData();
+            formData.append("wav_file", audioFile);
+
+            try {
+                // Display loading message
+                plotDiv.innerHTML = "<p>Processing audio... Please wait.</p>";
+
+                // Upload the audio and process it via the /objectifier endpoint
+                const response = await fetch("/objectifier_wav", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorMessage = await response.json();
+                    plotDiv.innerHTML = `<p>Error: ${errorMessage.error}</p>`;
+                    return;
+                }
+
+                const result = await response.json();
+                visualizeData(result); // Call the visualization function
+
+            } catch (error) {
+                console.error("Error uploading or processing the audio:", error);
+                plotDiv.innerHTML = "<p>Error processing the audio file. Please try again.</p>";
+            }
+        });
+
+        function visualizeData(data) {
+            // Ensure data is in the expected format
+            const { waveform, sample_rate, clusters } = data;
+            if (!waveform || !sample_rate || !clusters) {
+                plotDiv.innerHTML = "<p>Invalid data format received from server.</p>";
+                return;
+            }
+
+            // Generate time axis for the waveform
+            const timeAxis = Array.from({ length: waveform.length }, (_, i) => i / sample_rate);
+
+            // Waveform trace
+            const waveformTrace = {
+                x: timeAxis,
+                y: waveform,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Waveform',
+                line: { color: '#000000', width: 1 },
+            };
+
+            // Cluster traces
+            const clusterTraces = clusters.flatMap(cluster => {
+                return cluster.regions.map(region => {
+                    const startIdx = Math.floor(region.start_time * sample_rate);
+                    const endIdx = Math.ceil(region.end_time * sample_rate);
+                    return {
+                        x: timeAxis.slice(startIdx, endIdx),
+                        y: waveform.slice(startIdx, endIdx),
+                        mode: 'lines',
+                        name: `Cluster ${cluster.label}`,
+                        line: { color: cluster.color, width: 1 },
+                        hoverinfo: 'name+text',
+                        text: cluster.top_terms.map(term => `${term.term}: ${term.similarity.toFixed(2)}`).join('<br>')
+                    };
+                });
+            });
+
+            // Layout configuration
+            const layout = {
+                title: `Audio Clustering Visualization`,
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Amplitude' },
+                showlegend: true,
+            };
+
+            // Render the plot
+            Plotly.newPlot('plot', [waveformTrace, ...clusterTraces], layout);
+        }
+    </script>
+</body>
+</html>

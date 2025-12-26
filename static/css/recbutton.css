@@ -1,0 +1,63 @@
+/* Record button: idle = circle, recording = rectangle with countdown inside */
+.rec-circle-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background-color: #e53935;  /* red */
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  transition: background 0.2s, transform 0.1s, border-radius 0.2s, width 0.2s;
+}
+.rec-circle-btn:active { transform: scale(0.96); }
+
+/* Recording state -> rectangle and slightly wider */
+.rec-circle-btn.is-recording {
+  background-color: #c62828;   /* darker red */
+  border-radius: 8px;           /* rectangle */
+  width: 64px;                  /* a bit wider to fit digits */
+}
+
+/* Keep legacy #recTimer updated but visually hidden (even if JS sets display:inline) */
+#recTimer {
+  position: absolute !important;
+  left: -9999px !important;
+  top: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+@media print {
+  body * {
+    visibility: hidden;     /* hide everything */
+  }
+
+  #svgCanvas, #svgCanvas * {
+    visibility: visible;    /* show only sketch */
+  }
+
+  #svgCanvas {
+    display: block;
+    margin: 0 auto;         /* center horizontally */
+  }
+
+  /* Footer text a bit higher on the page */
+  /* Print-only logo footer */
+  body::after {
+    content: url("static/assets/SC-logo_small.png");
+    position: fixed;
+    bottom: 40mm;           /* adjust higher/lower */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: auto;
+    visibility: visible;
+  }
+}

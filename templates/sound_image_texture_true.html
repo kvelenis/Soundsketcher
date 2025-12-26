@@ -1,0 +1,123 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shape + Texture Sliders</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #fefefe;
+      font-family: sans-serif;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      margin: 20px 0;
+      background: white;
+    }
+    input[type="range"] {
+      width: 300px;
+    }
+    .section {
+      margin-bottom: 40px;
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+</head>
+<body>
+
+
+
+  <!-- SECTION 2: TEXTURE SLIDER -->
+  <div class="section">
+    <h2>Texture Granularity Slider</h2>
+    <input type="range" min="0" max="100" value="0" id="textureSlider" />
+    <canvas id="textureCanvas" width="600" height="400"></canvas>
+  </div>
+
+  <script>
+   
+
+    const textureCanvas = document.getElementById('textureCanvas');
+const textureCtx = textureCanvas.getContext('2d');
+const textureSlider = document.getElementById('textureSlider');
+const textureW = textureCanvas.width;
+const textureH = textureCanvas.height;
+
+// Offscreen canvas for rendering texture
+const offscreenCanvas = document.createElement('canvas');
+offscreenCanvas.width = textureW;
+offscreenCanvas.height = textureH;
+const offscreenCtx = offscreenCanvas.getContext('2d');
+
+function generateTextureImage(mappedValue) {
+  offscreenCtx.clearRect(0, 0, textureW, textureH);
+
+  // Background
+  offscreenCtx.fillStyle = "#c0d6e4";
+  offscreenCtx.fillRect(0, 0, textureW, textureH);
+
+  // Map slider range 0–100 → original logic 65–100
+  const originalValue = 65 + (mappedValue / 100) * 35;
+  const t = originalValue / 100;
+
+  const peakDensity = 0.18;
+  const density = peakDensity * Math.exp(-12 * Math.pow(t - 0.5, 2));
+  const grains = Math.floor(textureW * textureH * density);
+
+  const grainSize = 1 + t * 7;
+
+  for (let i = 0; i < grains; i++) {
+    const x = Math.random() * textureW;
+    const y = Math.random() * textureH;
+    const size = grainSize * (0.8 + Math.random() * 0.4);
+    const alpha = 0.3 + Math.random() * 0.5;
+
+    // Shadow
+    offscreenCtx.beginPath();
+    offscreenCtx.fillStyle = `rgba(50, 70, 90, ${alpha * 0.25})`;
+    offscreenCtx.arc(x + 1.5, y + 1.5, size / 2, 0, Math.PI * 2);
+    offscreenCtx.fill();
+
+    // Grain
+    offscreenCtx.beginPath();
+    offscreenCtx.fillStyle = `rgba(100,130,160,${alpha})`;
+    offscreenCtx.arc(x, y, size / 2, 0, Math.PI * 2);
+    offscreenCtx.fill();
+  }
+}
+
+function drawTexture(mappedValue) {
+  generateTextureImage(mappedValue);
+
+  // Clear the main canvas
+  textureCtx.clearRect(0, 0, textureW, textureH);
+
+  // Apply blur based on first 20 values
+  if (mappedValue <= 20) {
+    const blurAmount = (20 - mappedValue) * 0.75; // max 15px blur at value = 0
+    textureCtx.filter = `blur(${blurAmount}px)`;
+  } else {
+    textureCtx.filter = 'none';
+  }
+
+  // Draw blurred or sharp version
+  textureCtx.drawImage(offscreenCanvas, 0, 0);
+  textureCtx.filter = 'none';
+}
+
+textureSlider.addEventListener('input', () => {
+  drawTexture(Number(textureSlider.value));
+});
+
+drawTexture(0); // Initial render
+
+
+  </script>
+</body>
+</html>

@@ -65,3 +65,40 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
+// Open button: link this to your UI button!
+document.getElementById("openClampFeatureModal").addEventListener("click", function() {
+    document.getElementById("clampFeatureModal").style.display = "block";
+  });
+  
+  // Close button
+  document.getElementById("closeClampFeatureModal").addEventListener("click", function() {
+    document.getElementById("clampFeatureModal").style.display = "none";
+  });
+  
+  // Close if user clicks outside the modal content
+  window.addEventListener("click", function(event) {
+    const modal = document.getElementById("clampFeatureModal");
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  });
+
+
+  function openContactInfoModal(event) {
+    event.preventDefault();
+    document.getElementById('contactInfoModal').style.display = 'block';
+  }
+  
+  document.getElementById('closeContactInfoModal').addEventListener('click', function() {
+    document.getElementById('contactInfoModal').style.display = 'none';
+  });
+  
+  // Optional: close when clicking outside the modal
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('contactInfoModal');
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+  

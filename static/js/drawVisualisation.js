@@ -1,64 +1,280 @@
-// Initialize an array to store dot positions
-let pointsArray = [];
-function drawVisualization(audioData, svgContainer, canvasWidth, maxDuration, fileIndex) {
-    console.log(fileIndex);
-    // Remove existing SVG if it exists
-
-    // AUX FUNCTIONS
-    function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
-        var angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-        return {
-            x: centerX + (radius * Math.cos(angleInRadians)),
-            y: centerY + (radius * Math.sin(angleInRadians))
-        };
+//! Moved this outside drawVisualization
+function getMappedFeatureValue(feature,featureName,config,startRange,endRange,applySoftclip = false,softclipScale = 10,defaulValue = 0)
+{
+    if(featureName === "none")
+    {
+        return defaulValue;
     }
 
-    function polygon(centerX, centerY, points, radius) {
-        var degreeIncrement = 360 / points;
-        var d = "M"; // Start the SVG path string
-        for (var i = 0; i < points; i++) {
-            var angle = degreeIncrement * i;
-            var point = polarToCartesian(centerX, centerY, radius, angle);
-            d += point.x + "," + point.y + " ";
+    const entry = config[featureName];
+    if(!entry)
+    {
+        return 0;
+    }
+
+    const min = entry.min;
+    const max = entry.max;
+
+    const clamped = clamp(entry.val(feature),min,max);
+    //! Softclip applies to same features as clamping
+    if(applySoftclip && clampConfig[featureName])
+    {
+        const shift = (entry.median - min)/(max - min);
+        return mapWithSoftClipping(clamped,min,max,startRange,endRange,shift,softclipScale)
+    }
+    else
+    {
+        return map(clamped,min,max,startRange,endRange);
+    }
+}
+
+//! Light modifications
+function getYAxisScaleFromConfig(featureConfig,featureName,scale = "linear") {
+
+    const entry = featureConfig[featureName];
+    if(!entry)
+    {
+        return null;
+    }
+
+    let min = entry.min;
+    let max = entry.max;
+    
+    if(PITCH_FEATURES.has(featureName))
+    {
+        // min = Math.min(20,min); //! Added Math.min
+        // max = Math.max(4000,max); //! Added Math.max
+        // min = 20;
+        // max = 4000;
+    }
+
+    const labelFormatter = scale !== "linear"
+    ? (v) => (v < 10 ? v.toFixed(2) : v.toFixed(0))
+    : (v) => v.toFixed(v < 10 ? 2 : 0);
+
+    return { min, max, labelFormatter };
+}
+
+//! Merged computeYAxisValue & getMappedYAxisFallback
+function computeYAxisValue(feature,featureName,config,height,padding,inverted,scale,min,max,applySoftclip = false,softclipScale = 10)
+{
+    let value = null;
+    const entry = config[featureName];
+
+    const mapFn = scale === "linear" ? mapToLinearScale :
+                  scale === "log"    ? mapToLogScale    :
+                  scale === "mel"    ? mapToMelScale    :
+                  undefined; // or throw, or default
+    
+    if(!entry)
+    {
+        value = (min + max)/2;
+        value = mapFn(value,min,max,height,padding,inverted);
+    }
+    else
+    {
+        const min_value = entry.min;
+        const max_value = entry.max;
+        value = clamp(entry.val(feature),min_value,max_value);
+        if(applySoftclip && clampConfig[featureName])
+        {    
+            const shift = (entry.median - min_value)/(max_value - min_value);
+            value = mapWithSoftClipping(value,min_value,max_value,min_value,max_value,shift,softclipScale)
         }
-        d += "Z"; // Close the path
-        return d;
+        value = mapFn(value,min,max,height,padding,inverted);
     }
 
-    // Function to convert HEX to HSL
-    function hexToHSL(hex) {
-        // Convert hex to RGB
-        let r = parseInt(hex.slice(1, 3), 16) / 255;
-        let g = parseInt(hex.slice(3, 5), 16) / 255;
-        let b = parseInt(hex.slice(5, 7), 16) / 255;
+    return value;
 
-        // Find min and max RGB values
-        let max = Math.max(r, g, b);
-        let min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
+    //console.log("INSIDE computeYAxisValue:", "feature:", feature, "featureName:", featureName, "isLog:", isLog, "min:", min, "max:", max);
 
-        if (max === min) {
-            h = s = 0; // Achromatic
-        } else {
-            let d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
-            }
-            h /= 6;
-        }
+    // const mapFn = isLog ? mapToLogScale : mapToLinearScale;
+    // const padded = (val) => mapFn(val,min,max,height,padding,inverted);
 
-        return Math.round(h * 360);
-    }
+    //! Changed "Math.max(feature.X + 1, 1)" logic to "(feature.X >= 1 ? feature.X : 1)"
+    // switch (featureName)
+    // {
+        // case "spectral_centroid":
+        //     const safeCentroid = isLog ? (feature.spectral_centroid >= 1 ? feature.spectral_centroid : 1) : feature.spectral_centroid;
+        //     return padded(safeCentroid);
 
-    let existingSvg = document.querySelector('svg');
-    // if (existingSvg) {
-    //     existingSvg.remove();
+        // case "weighted_spectral_centroid":
+        //     const safeCentroidWeighted = isLog ? (feature.weighted_spectral_centroid >= 1 ? feature.weighted_spectral_centroid : 1) : feature.weighted_spectral_centroid;
+        //     return padded(safeCentroidWeighted);
+            
+        // //! Added this
+        // case "crepe_f0":
+        //     const safeCrepeF0 = isLog ? (feature.crepe_f0 >= 1 ? feature.crepe_f0 : 1) : feature.crepe_f0;
+        //     return padded(safeCrepeF0);
+
+        // //! Modified this
+        // case "perceived_pitch_f0_or_SC_weighted":
+        //     const safePerceivedPitchWeighted = isLog ? (feature.perceived_pitch_f0_or_SC_weighted >= 1 ? feature.perceived_pitch_f0_or_SC_weighted : 1) : feature.perceived_pitch_f0_or_SC_weighted;
+        //     return padded(safePerceivedPitchWeighted);
+            // return padded(perceivedPitchF0OrSC(feature.yin_periodicity, feature.crepe_f0, feature.weighted_spectral_centroid));
+
+        // case "multipeak_centroid":
+        //     const safeMultipeakCentroid = isLog ? Math.max(feature.multipeak_centroid + 1, 1) : feature.multipeak_centroid;
+        //     return padded(safeMultipeakCentroid);
+
+        // case "spectral_peak":
+        //     const safeSpectralPeak = isLog ? Math.max(feature.spectral_peak + 1, 1) : feature.spectral_peak;
+        //     return padded(safeSpectralPeak);
+
+        // case "weighted_spectral_centroid_bandwidth":
+        //     const safeCentroidWeightedBandwidth = isLog ? Math.max(feature.weighted_spectral_centroid + 1, 1) : feature.weighted_spectral_centroid;
+        //     return padded(spectralCentroidWithBandwidthWeight(feature.weighted_spectral_centroid, feature.spectral_bandwidth));
+        
+        // case "centroid_peak_bandwidth":
+        //     return padded(computeBlendedTonalY(feature.spectral_peak, feature.weighted_spectral_centroid, feature.spectral_bandwidth));
+        
+        // case "centroid_peak_bandwidth_prominence":
+        //     return padded(computeTonalYWithProminenceDb({
+        //         periodicity: feature.yin_periodicity,
+        //         crepeF0: feature.crepe_f0,
+        //         spectralCentroidHz: feature.weighted_spectral_centroid,
+        //         spectralBandwidthHz: feature.spectral_bandwidth,
+        //         localPeakHz: feature.spectral_peak,
+        //         prominenceDb: feature.spectral_peak_prominence_db
+        //     }));
+            
+        // case "perceived_pitch":
+        //     return padded(perceivedPitch(feature.crepe_confidence, feature.crepe_f0, feature.spectral_centroid));
+    
+        // case "perceived_pitch_librosa":
+        //     return padded(perceivedPitchLibrosa(feature.crepe_confidence, feature.yin_f0_librosa, feature.spectral_centroid));
+    
+        // case "perceived_pitch_librosa_periodicity":
+        //     return padded(perceivedPitchLibrosaPeriodicity(feature.yin_periodicity, feature.yin_f0_librosa, feature.spectral_centroid));
+    
+        // case "perceived_pitch_crepe_periodicity":
+        //     return padded(perceivedPitchCrepePeriodicity(feature.yin_periodicity, feature.crepe_f0, feature.spectral_centroid));
+    
+        // case "perceived_pitch_f0_or_SC":
+        //     return padded(perceivedPitchF0OrSC(feature.yin_periodicity, feature.crepe_f0, feature.spectral_centroid));
+
+    
+        // case "perceived_pitch_f0_candidates_periodicity":
+        //     return padded(perceivedPitchF0Candidates(feature.yin_periodicity, feature.f0_candidates, feature.spectral_centroid));
+    
+        // default:
+        //     return null; // fallback to config-based mapping
     // }
+}
 
-    console.log('audioData', audioData)
+//! Merged with computeYAxisValue
+// function getMappedYAxisFallback(featureName,config,canvasHeight,padding,isInverted,isLog,min,max,defaultValue = 400,fallbackFeature = "spectral_centroid")
+// {
+//     if (featureName === "none")
+//     {
+//         return defaultValue;
+//     }
+//     const entry = config[featureName] ?? config[fallbackFeature];
+//     const value = clamp(entry.val(),min,max);
+
+//     const mapFn = isLog ? mapToLogScale : mapToLinearScale;
+//     return mapFn(value,min,max,canvasHeight,padding,isInverted);
+// }
+  
+function computeRobustStats(data,lowerPercentile = 5,upperPercentile = 95)
+{
+    const length = data.length
+    if(!length)
+    {
+        return { min: 0, max: 1 };
+    }
+    const sorted = [...data].sort((a,b) => a - b);
+
+    let lowerIndex,upperIndex;
+    if(lowerPercentile == upperPercentile)
+    {
+        const index = Math.round((lowerPercentile/100)*(length - 1));
+        lowerIndex = index;
+        upperIndex = index;
+    }
+    else
+    {
+        lowerIndex = Math.floor((lowerPercentile/100)*(length - 1));
+        upperIndex = Math.ceil((upperPercentile/100)*(length - 1));
+    }
+
+    let mid = Math.floor(length/2)
+    const median = length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid])/2
+
+    const clamped = sorted.slice(lowerIndex,upperIndex + 1);
+    const clamped_length = clamped.length;
+    mid = Math.floor(clamped_length/2)
+    const clamped_median = clamped_length % 2 !== 0 ? clamped[mid] : (clamped[mid - 1] + clamped[mid])/2
+
+    return {
+        min: sorted[lowerIndex],
+        max: sorted[upperIndex],
+        median: median,
+        clamped_median: clamped_median
+    };
+}
+  
+/**
+ * Compute robust min/max for raw and derived audio features.
+ * @param {Object[]} features - Your audioData.features array.
+ * @param {string[]} rawFeatureNames - Keys that exist directly on each feature object.
+ * @param {Object} derivedFeatureFuncs - { name: function(f) => value }
+ * @param {number} [lower=5] - Lower percentile.
+ * @param {number} [upper=95] - Upper percentile.
+ * @returns {Object} - { featureName: { min, max } }
+ */
+function prepareRobustStats(features,rawFeatureNames,derivedFeatureFuncs,lower = 5,upper = 95)
+{
+    const robustStats = {};
+  
+    // Handle raw features
+    rawFeatureNames.forEach(name =>
+    {
+        // const values = features.map(f => f[name]).filter(v => isFinite(v));
+        const values = features.map(f => f[name]).filter((v, i) => isFinite(v) && features[i]["loudness"] !== 0);
+        robustStats[name] = computeRobustStats(values,lower,upper);
+    });
+  
+    // Handle derived features
+    for (const [name,func] of Object.entries(derivedFeatureFuncs))
+    {
+        // const values = features.map(func).filter(v => isFinite(v));
+        const values = features.map(func).filter((v, i) => isFinite(v) && features[i]["loudness"] !== 0);
+        robustStats[name] = computeRobustStats(values,lower,upper);
+    }
+  
+    return robustStats;
+}
+  
+// ✅ Clamp config lives outside
+let clampConfig = {};
+
+// ✅ Update function lives outside
+function updateClampConfig()
+{
+    const selected = Array.from(document.getElementById("clamp-feature-select").selectedOptions).map(opt => opt.value);
+    rawFeatureNames.forEach(name =>
+    {
+        clampConfig[name] = selected.includes(name);
+    });
+}
+document.getElementById("clamp-feature-select").addEventListener("change",updateClampConfig);
+updateClampConfig();
+
+// Initialize an array to store dot positions
+// let pointsArray = [];
+//! Modifications here & there
+// function drawVisualization(audioData, svgContainer, canvasWidth, maxDuration, fileIndex, baseHue, isObjectifyEnabled)
+function drawVisualization()
+{
+    const configurations = [];
+    let minValue = Number.MAX_SAFE_INTEGER;
+    let maxValue = Number.MIN_SAFE_INTEGER;
+    let yAxisFormatter;
+
+    const threshold_value = parseFloat(document.getElementById("tmp-slider").noUiSlider.get());
+    const gamma_value = parseFloat(document.getElementById("gamma-slider").noUiSlider.get());
+    const periodicity_selector = globalAudioData.data[0].features[0].raw_periodicity !== undefined ? "raw_periodicity" : "yin_periodicity";
 
     // Get the selected feature and characteristic
     const selectedFeature1 = featureSelect1.value;
@@ -69,1315 +285,1258 @@ function drawVisualization(audioData, svgContainer, canvasWidth, maxDuration, fi
     const selectedFeature6 = featureSelect6.value;
     const selectedFeature7 = featureSelect7.value;
     
-
     // Get the current state of the checkbox and the slider value
-    const isThresholdEnabled = thresholdToggle.checked;
-    const zeroCrossingThreshold = parseFloat(thresholdSlider.value);
+    // const isThresholdEnabled = thresholdToggle.checked;
+    // const zeroCrossingThreshold = parseFloat(thresholdSlider.value);
 
     const isThresholdCircleEnabled = thresholdCircle.checked;
-    const isPolygonEnabled = polygonToggle.checked;
     const isJoinPathsEnabled = joinDataPoints.checked;
 
+    //! Changed this
+    const isLineSketchingEnabled = !document.getElementById("linePolygonMode").checked
+    const isPolygonEnabled = !isLineSketchingEnabled
+    // const isLineSketchingEnabled = lineSketchingToggle.checked;
+    // const isPolygonEnabled = polygonToggle.checked;
 
-  
+    const isGlobalClampEnabled = document.getElementById("toggleClamp").checked;
+    const clampSlider = document.getElementById("slider-clamp");
+    const [lowerClampBound,upperClampBound] = clampSlider.noUiSlider.get().map(parseFloat);
 
+    const isSoftclipEnabled = document.getElementById("toggleSoftclip").checked;
+    const softclipSlider = document.getElementById("slider-softclip");
+    const softclipScale = parseFloat(softclipSlider.noUiSlider.get());
+
+    const isLogSelected = document.getElementById("log-linear").checked;
+    const isMelSelected = document.getElementById("mel-scale").checked;
+
+    //! Tried to move filtering to frontend, didn't get good results
+    // const applyFiltering = document.getElementById("filter_button").checked;
+    // const overlap = percentages[document.getElementById("window_overlap_selector").value];
+    // const kernelSize = calculate_optimal_length(overlap);
+
+    const scale = isMelSelected ? "mel" :
+                  isLogSelected ? "log" :
+                  "linear";
+
+    // Y AXIS
+    const isInverted_y_axis = document.getElementById("invertMapping-5")?.checked;
+
+    // LINE LENGTH
+    const slider1 = document.getElementById("slider-1");
+    const isInverted_lineLength = document.getElementById("invertMapping-1")?.checked;
+    const {startRange_lineLength,endRange_lineLength} = calculateDynamicRange(slider1,isInverted_lineLength,"startRange_lineLength","endRange_lineLength");
+
+    // LINE WIDTH
+    const slider2 = document.getElementById("slider-2");
+    const isInverted_lineWidth = document.getElementById("invertMapping-2")?.checked;
+    const {startRange_lineWidth,endRange_lineWidth } = calculateDynamicRange(slider2,isInverted_lineWidth,"startRange_lineWidth","endRange_lineWidth");
+
+    // COLOR SATURATION
+    const slider3 = document.getElementById("slider-3");
+    const isInverted_colorSaturation = document.getElementById("invertMapping-3")?.checked;
+    const {startRange_colorSaturation,endRange_colorSaturation} = calculateDynamicRange(slider3,isInverted_colorSaturation,"startRange_colorSaturation","endRange_colorSaturation");
+
+    // COLOR LIGHTNESS
+    const slider6 = document.getElementById("slider-6");
+    const isInverted_colorLightness = document.getElementById("invertMapping-6")?.checked;
+    const {startRange_colorLightness,endRange_colorLightness} = calculateDynamicRange(slider6,isInverted_colorLightness,"startRange_colorLightness","endRange_colorLightness");
+
+    // ANGLE
+    const slider4 = document.getElementById("slider-4");
+    const isInverted_angle = document.getElementById("invertMapping-4")?.checked;
+    const {startRange_angle,endRange_angle} = calculateDynamicRange(slider4,isInverted_angle,"startRange_angle","endRange_angle");
+
+    // DASH ARRAY
+    const slider7 = document.getElementById("slider-7");
+    const isInverted_dashArray = document.getElementById("invertMapping-7")?.checked;
+    const {startRange_dashArray,endRange_dashArray} = calculateDynamicRange(slider7,isInverted_dashArray,"startRange_dashArray","endRange_dashArray");
+
+    //! Moved derived feature calculations to backend #tmpf0
+    // const derivedFeatureFuncs = {};
+    const derivedFeatureFuncs = { perceived_pitch_f0_or_SC_weighted: f => perceivedPitchF0OrSC(f[periodicity_selector],f.crepe_f0,f.weighted_spectral_centroid,threshold_value,gamma_value) };
+    // const derivedFeatureFuncs = { perceived_pitch_f0_or_SC_weighted: f => perceivedPitchF0OrSC(f.crepe_confidence,f.crepe_f0,f.spectral_centroid,document.getElementById("tmp-slider").value) }; // Tmp just for testing the slider
+    // const derivedFeatureFuncs = {
+    //     perceived_pitch: f => perceivedPitch(f.crepe_confidence, f.crepe_f0, f.spectral_centroid),
+    //     perceived_pitch_librosa: f => perceivedPitchLibrosa(f.crepe_confidence, f.yin_f0_librosa, f.spectral_centroid),
+    //     perceived_pitch_librosa_periodicity: f => perceivedPitchLibrosaPeriodicity(f.yin_periodicity, f.yin_f0_librosa, f.spectral_centroid),
+    //     perceived_pitch_crepe_periodicity: f => perceivedPitchCrepePeriodicity(f.yin_periodicity, f.crepe_f0, f.spectral_centroid),
+    //     perceived_pitch_f0_or_SC: f => perceivedPitchF0OrSC(f.yin_periodicity, f.crepe_f0, f.spectral_centroid),
+    //     perceived_pitch_f0_or_SC_weighted: f => perceivedPitchF0OrSC(f.yin_periodicity, f.crepe_f0, f.weighted_spectral_centroid), //! Added this
+    //     perceived_pitch_f0_candidates_periodicity: f => perceivedPitchF0Candidates(f.yin_periodicity, f.f0_candidates, f.spectral_centroid),
+    //     loudness_zcr: f => f.loudness * f.zerocrossingrate,
+    //     loudness_periodicity: f => f.loudness * (1 - f.yin_periodicity),
+    //     loudness_pitchConf: f => f.loudness * (1 - f.crepe_confidence)
+    // };
+
+    const svgContainer = document.getElementById("svgCanvas");
+    const canvasWidth = svgContainer.getAttribute("width");
+    const canvasHeight = svgContainer.getAttribute("height");
+    const padding = parseInt(svgContainer.getAttribute("padding"));
+    const maxDuration = Math.max(...globalAudioData.data.map(file => file.features[file.features.length - 1]?.timestamp || 0));
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    svgContainer.appendChild(defs);
+
+    const isObjectifyEnabled = document.getElementById("objectifierMode").checked
+
+    //! Loop through files
+    globalAudioData.data.forEach((audioData,fileIndex) =>
+    {
+        // console.log(`File ${fileIndex}: ${audioData.filename}`);
+
+        //! Added this [#update: moved this calculations to backend (run_serial_extraction)]
+        // for (let i = 0; i < audioData.features.length; i++)
+        // {
+        //     const feature = audioData.features[i];
+        //     feature["yin_periodicity"] = adjustForSaturationPeriodicity(feature["yin_periodicity"]);
+        // }
+
+        //! Tried to move filtering to frontend, didn't get good results
+        // const audioData = JSON.parse(JSON.stringify(audioDataRef));
+        // if(applyFiltering)
+        // {
+        //     rawFeatureNames.forEach(name =>
+        //     {
+        //         if(clampConfig[name])
+        //         {
+        //             let values = audioData.features.map(f => f[name]);
+        //             values = medfilt(values,kernelSize);
+        //             for (let i = 0; i < audioData.features.length; i++)
+        //             {
+        //                 audioData.features[i][name] = values[i];
+        //             }
+        //         }
+        //     });
+        // }
+        
+        const robustStats = prepareRobustStats(audioData.features,rawFeatureNames,derivedFeatureFuncs,lowerClampBound,upperClampBound);
+        //console.log("clampConfig:", clampConfig);
+        //console.log("✔️ robustStats:", robustStats);
+
+        //! Introducing dynamic calculations for all features
+        const maxFeatureValues = Object.fromEntries(rawFeatureNames.map(key => [key,Number.MIN_SAFE_INTEGER]));
+        const minFeatureValues = Object.fromEntries(rawFeatureNames.map(key => [key,Number.MAX_SAFE_INTEGER]));
+        for (let i = 0; i < audioData.features.length; i++)
+        {
+            const feature = audioData.features[i];
+
+            //! tmpf0
+            feature["perceived_pitch_f0_or_SC_weighted"] = perceivedPitchF0OrSC(feature[periodicity_selector],feature.crepe_f0,feature.weighted_spectral_centroid,threshold_value,gamma_value); // tmp just for testing the slider
+
+            // Skip silent frames
+            if (feature["loudness"] === 0) continue;
+
+            rawFeatureNames.forEach(name =>
+            {
+                if(feature[name] < minFeatureValues[name])
+                {
+                    minFeatureValues[name] = feature[name];
+                }
+                if(feature[name] > maxFeatureValues[name])
+                {
+                    maxFeatureValues[name] = feature[name];
+                }
+            });
+        }
+        // Initialize maxAmplitude to the smallest possible value
+        // let maxSpectralCentroid = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralCentroidWeigthed = Number.MIN_SAFE_INTEGER;
+        // let maxF0Crepe = Number.MIN_SAFE_INTEGER;
+        // let maxPerceivedPitchF0OrSC_weighted = Number.MIN_SAFE_INTEGER;
+        // let maxLoudness = Number.MIN_SAFE_INTEGER;
+        // let maxLoudnessPeriodicity = Number.MIN_SAFE_INTEGER;
+        // let maxLoudnessCrepeConfidence = Number.MIN_SAFE_INTEGER;
+        // let maxSharpness = Number.MIN_SAFE_INTEGER;
+        // let maxMirMpsRoughness = Number.MIN_SAFE_INTEGER;
+        // let maxMirSharpnessZwicker = Number.MIN_SAFE_INTEGER;
+        // let maxMirRoughnessVassilakis = Number.MIN_SAFE_INTEGER;
+        // let maxPeriodicity = Number.MIN_SAFE_INTEGER;
+        // let maxF0CrepeConfidence = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralFlux = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralFlatness = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralBandwidth = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralPeak = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralPeakProminenceDb = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralPeakProminenceNorm = Number.MIN_SAFE_INTEGER;
+        // let maxMultipeakCentroid = Number.MIN_SAFE_INTEGER;
+        // let maxAmplitude = Number.MIN_SAFE_INTEGER;
+        // let maxZerocrossingrate = Number.MIN_SAFE_INTEGER;
+        // let maxYinF0Librosa = Number.MIN_SAFE_INTEGER;
+        // let maxYinF0Aubio = Number.MIN_SAFE_INTEGER;
+        // let maxStandardDeviation = Number.MIN_SAFE_INTEGER;
+        // let maxBrightness = Number.MIN_SAFE_INTEGER;
+        // let maxF0Candidates = Number.MIN_SAFE_INTEGER;
+        // let maxMirRoughnessZwicker = Number.MIN_SAFE_INTEGER;
+        // let maxMirRoughnessSethares = Number.MIN_SAFE_INTEGER;
+        // let maxPerceivedPitch = Number.MIN_SAFE_INTEGER;
+        // let maxPerceivedPitchLibrosa = Number.MIN_SAFE_INTEGER;
+        // let maxPerceivedPitchLibrosaPeriodicity = Number.MIN_SAFE_INTEGER;
+        // let maxPerceivedPitchCrepePeriodicity = Number.MIN_SAFE_INTEGER;
+        // let maxPerceivedPitchF0OrSC = Number.MIN_SAFE_INTEGER;
+        // let maxPerceivedPitchF0Candidates = Number.MIN_SAFE_INTEGER;
+        // let maxSpecralCentroidWeigthedBandwidth = Number.MIN_SAFE_INTEGER;
+        // let maxCentroidPeakBandwidth = Number.MIN_SAFE_INTEGER;
+        // let maxCentroidPeakBandwidthProminence = Number.MIN_SAFE_INTEGER;
+        // let maxSpectralCentroidMinusStandardDeviation = Number.MIN_SAFE_INTEGER;
+
+        // Threshold for zero crossing rate
+        //const zeroCrossingThreshold = 30;
+        // Calculate maxAmplitude and maxZerocrossingrate
     
+        // for (let i = 0; i < audioData.features.length; i++)
+        // {
+            // const f = audioData.features[i];
 
-    // Initialize maxAmplitude to the smallest possible value
-    let maxSpectralCentroid = Number.MIN_SAFE_INTEGER;
-    let maxSpectralFlux = Number.MIN_SAFE_INTEGER;
-    let maxSpectralFlatness = Number.MIN_SAFE_INTEGER;
-    let maxSpectralBandwidth = Number.MIN_SAFE_INTEGER;
-    let maxAmplitude = Number.MIN_SAFE_INTEGER;
-    let maxZerocrossingrate = Number.MIN_SAFE_INTEGER;
-    let maxYinF0Librosa = Number.MIN_SAFE_INTEGER;
-    let maxYinF0Aubio = Number.MIN_SAFE_INTEGER;
-    let maxF0Crepe = Number.MIN_SAFE_INTEGER;
-    let maxF0CrepeConfidence = Number.MIN_SAFE_INTEGER;
-    let maxStandardDeviation = Number.MIN_SAFE_INTEGER;
-    let maxBrightness = Number.MIN_SAFE_INTEGER;
-    let maxSharpness = Number.MIN_SAFE_INTEGER;
-    let maxLoudness = Number.MIN_SAFE_INTEGER;
-    let maxPeriodicity = Number.MIN_SAFE_INTEGER;
-    let maxF0Candidates = Number.MIN_SAFE_INTEGER;
+            // // Skip silent frames
+            // if (f.loudness === 0) continue;
+        
+            // if (f.spectral_centroid > maxSpectralCentroid) maxSpectralCentroid = f.spectral_centroid;
+            // if (f.weighted_spectral_centroid > maxSpectralCentroidWeigthed) maxSpectralCentroidWeigthed = f.weighted_spectral_centroid;
+            // if (f.crepe_f0 > maxF0Crepe) maxF0Crepe = f.crepe_f0;
+            // if (f.perceived_pitch_f0_or_SC_weighted > maxPerceivedPitchF0OrSC_weighted) maxPerceivedPitchF0OrSC_weighted = f.perceived_pitch_f0_or_SC_weighted;
+            // if (f.loudness > maxLoudness) maxLoudness = f.loudness;
+            // if (f.loudness_periodicity > maxLoudnessPeriodicity) maxLoudnessPeriodicity = f.loudness_periodicity;
+            // if (f.loudness_pitchConf > maxLoudnessCrepeConfidence) maxLoudnessCrepeConfidence = f.loudness_pitchConf;
+            // if (f.sharpness > maxSharpness) maxSharpness = f.sharpness;
+            // if (f.mir_mps_roughness > maxMirMpsRoughness) maxMirMpsRoughness = f.mir_mps_roughness;
+            // if (f.mir_sharpness_zwicker > maxMirSharpnessZwicker) maxMirSharpnessZwicker = f.mir_sharpness_zwicker;
+            // if (f.mir_roughness_vassilakis > maxMirRoughnessVassilakis) maxMirRoughnessVassilakis = f.mir_roughness_vassilakis;
+            // if (f.yin_periodicity > maxPeriodicity) maxPeriodicity = f.yin_periodicity;
+            // if (f.crepe_confidence > maxF0CrepeConfidence) maxF0CrepeConfidence = f.crepe_confidence;
 
+            // if (f.amplitude > maxAmplitude) maxAmplitude = f.amplitude;
+            // if (f.zerocrossingrate > maxZerocrossingrate) maxZerocrossingrate = f.zerocrossingrate;
+            // if (f.spectral_bandwidth > maxSpectralBandwidth) maxSpectralBandwidth = f.spectral_bandwidth;
+            // if (f.spectral_peak > maxSpectralPeak) maxSpectralPeak = f.spectral_peak;
+            // if (f.spectral_peak_prominence_db > maxSpectralPeakProminenceDb) maxSpectralPeakProminenceDb = f.spectral_peak_prominence_db;
+            // if (f.spectral_peak_prominence_norm > maxSpectralPeakProminenceNorm) maxSpectralPeakProminenceNorm = f.spectral_peak_prominence_norm;
+            // if (f.multipeak_centroid > maxMultipeakCentroid) maxMultipeakCentroid = f.multipeak_centroid;
+            // if (f.spectral_flatness > maxSpectralFlatness) maxSpectralFlatness = f.spectral_flatness;
+            // if (f.spectral_flux > maxSpectralFlux) maxSpectralFlux = f.spectral_flux;
+            // if (f.yin_f0_librosa > maxYinF0Librosa) maxYinF0Librosa = f.yin_f0_librosa;
+            // if (f.yin_f0_aubio > maxYinF0Aubio) maxYinF0Aubio = f.yin_f0_aubio;
+            // if (f.standard_deviation > maxStandardDeviation) maxStandardDeviation = f.standard_deviation;
+            // const centroidMinusSD = f.spectral_centroid - f.standard_deviation / 2;
+            // if (centroidMinusSD > maxSpectralCentroidMinusStandardDeviation)
+            // {
+            //     maxSpectralCentroidMinusStandardDeviation = centroidMinusSD;
+            // }
+            // if (f.brightness > maxBrightness) maxBrightness = f.brightness;
+            // if (f.mir_roughness_zwicker > maxMirRoughnessZwicker) maxMirRoughnessZwicker = f.mir_roughness_zwicker;
+            // if (f.mir_roughness_sethares > maxMirRoughnessSethares) maxMirRoughnessSethares = f.mir_roughness_sethares;
 
-    let maxSpectralCentroidMinusStandardDeviation = Number.MIN_SAFE_INTEGER;
-    // Threshold for zero crossing rate
-    //const zeroCrossingThreshold = 30;
-    // Calculate maxAmplitude and maxZerocrossingrate
-    // console.log("LENGTH:",audioData.features.length)
-    
-    for (let i = 0; i < audioData.features.length; i++) {
-        // console.log("AMPLITUDE:",audioData.features[i].amplitude)
-        if (audioData.features[i].amplitude > maxAmplitude) {
-            maxAmplitude = audioData.features[i].amplitude;
-        }
-        if (audioData.features[i].zerocrossingrate > maxZerocrossingrate) {
-            maxZerocrossingrate = audioData.features[i].zerocrossingrate;
-        }
-        if (audioData.features[i].spectral_centroid > maxSpectralCentroid) {
-            maxSpectralCentroid = audioData.features[i].spectral_centroid;
-        }
-        if (audioData.features[i].spectral_bandwidth > maxSpectralBandwidth) {
-            maxSpectralBandwidth = audioData.features[i].spectral_bandwidth;
-        }
-        if (audioData.features[i].spectral_flatness > maxSpectralFlatness) {
-            maxSpectralFlatness = audioData.features[i].spectral_flatness;
-        }
-        if (audioData.features[i].spectral_flux > maxSpectralFlux) {
-            maxSpectralFlux = audioData.features[i].spectral_flux;
-        }
-        if (audioData.features[i].yin_f0_librosa > maxYinF0Librosa) {
-            maxYinF0Librosa = audioData.features[i].yin_f0_librosa;
-        }
-        if (audioData.features[i].yin_f0_aubio > maxYinF0Aubio) {
-            maxYinF0Aubio = audioData.features[i].yin_f0_aubio;
-        }
-        if (audioData.features[i].crepe_f0 > maxF0Crepe) {
-            maxF0Crepe = audioData.features[i].crepe_f0;
-        }
-        if (audioData.features[i].yin_periodicity > maxPeriodicity) {
-            maxPeriodicity = audioData.features[i].yin_periodicity;
-        }
-        if (audioData.features[i].yin_periodicity > maxF0Candidates) {
-            maxF0Candidates = audioData.features[i].f0_candidates;
-        }
-        if (audioData.features[i].crepe_confidence > maxF0CrepeConfidence) {
-            maxF0CrepeConfidence = audioData.features[i].crepe_confidence;
-        }
-        if (audioData.features[i].standard_deviation > maxStandardDeviation) {
-            maxStandardDeviation = audioData.features[i].standard_deviation;
-        }
-        if ((audioData.features[i].spectral_centroid - audioData.features[i].standard_deviation/2) > maxSpectralCentroidMinusStandardDeviation) {
-            maxSpectralCentroidMinusStandardDeviation = (audioData.features[i].spectral_centroid - audioData.features[i].standard_deviation/2);
-        }
-        if (audioData.features[i].brightness > maxBrightness) {
-            maxBrightness = audioData.features[i].brightness;
-        }
-        if (audioData.features[i].sharpness > maxSharpness) {
-            maxSharpness = audioData.features[i].sharpness;
-        }
-        if (audioData.features[i].loudness > maxLoudness) {
-            maxLoudness = audioData.features[i].loudness;
-        }
+            // const pPitch = perceivedPitch(f.crepe_confidence, f.crepe_f0, f.spectral_centroid);
+            // if (pPitch > maxPerceivedPitch) maxPerceivedPitch = pPitch;
 
-    }
+            // const pPitchLibrosa = perceivedPitchLibrosa(f.crepe_confidence, f.yin_f0_librosa, f.spectral_centroid);
+            // if (pPitchLibrosa > maxPerceivedPitchLibrosa) maxPerceivedPitchLibrosa = pPitchLibrosa;
 
-    // Initialize min values to the largest possible value
-    let minSpectralCentroid = Number.MAX_SAFE_INTEGER;
-    let minSpectralFlux = Number.MAX_SAFE_INTEGER;
-    let minSpectralFlatness = Number.MAX_SAFE_INTEGER;
-    let minSpectralBandwidth = Number.MAX_SAFE_INTEGER;
-    let minAmplitude = Number.MAX_SAFE_INTEGER;
-    let minZerocrossingrate = Number.MAX_SAFE_INTEGER;
-    let minYinF0Librosa = Number.MAX_SAFE_INTEGER;
-    let minYinF0Aubio = Number.MAX_SAFE_INTEGER;
-    let minF0Crepe = Number.MAX_SAFE_INTEGER;
-    let minF0CrepeConfidence = Number.MAX_SAFE_INTEGER;
-    let minStandardDeviation = Number.MAX_SAFE_INTEGER;
-    let minBrightness = Number.MAX_SAFE_INTEGER;
-    let minSharpness = Number.MAX_SAFE_INTEGER;
-    let minLoudness = Number.MAX_SAFE_INTEGER;
-    let minPeriodicity = Number.MAX_SAFE_INTEGER;
+            // const pPitchLibrosaPeriodicity = perceivedPitchLibrosaPeriodicity(f.yin_periodicity, f.yin_f0_librosa, f.spectral_centroid);
+            // if (pPitchLibrosaPeriodicity > maxPerceivedPitchLibrosaPeriodicity) maxPerceivedPitchLibrosaPeriodicity = pPitchLibrosaPeriodicity;
 
-    let minSpectralCentroidMinusStandardDeviation = Number.MAX_SAFE_INTEGER;
+            // const pPitchCrepePeriodicity = perceivedPitchCrepePeriodicity(f.yin_periodicity, f.crepe_f0, f.spectral_centroid);
+            // if (pPitchCrepePeriodicity > maxPerceivedPitchCrepePeriodicity) maxPerceivedPitchCrepePeriodicity = pPitchCrepePeriodicity;
 
-    // Iterate through features to calculate minimum values (excluding loudness = 0)
-    for (let i = 0; i < audioData.features.length; i++) {
-        // Skip processing if loudness is 0
-        if (audioData.features[i].loudness === 0) {
-            continue;
-        }
-        if (audioData.features[i].amplitude < minAmplitude) {
-            minAmplitude = audioData.features[i].amplitude;
-        }
-        if (audioData.features[i].zerocrossingrate < minZerocrossingrate) {
-            minZerocrossingrate = audioData.features[i].zerocrossingrate;
-        }
-        if (audioData.features[i].spectral_centroid < minSpectralCentroid) {
-            minSpectralCentroid = audioData.features[i].spectral_centroid;
-        }
-        if (audioData.features[i].spectral_bandwidth < minSpectralBandwidth) {
-            minSpectralBandwidth = audioData.features[i].spectral_bandwidth;
-        }
-        if (audioData.features[i].spectral_flatness < minSpectralFlatness) {
-            minSpectralFlatness = audioData.features[i].spectral_flatness;
-        }
-        if (audioData.features[i].spectral_flux < minSpectralFlux) {
-            minSpectralFlux = audioData.features[i].spectral_flux;
-        }
-        if (audioData.features[i].yin_f0_librosa < minYinF0Librosa) {
-            minYinF0Librosa = audioData.features[i].yin_f0_librosa;
-        }
-        if (audioData.features[i].yin_f0_aubio < minYinF0Aubio) {
-            minYinF0Aubio = audioData.features[i].yin_f0_aubio;
-        }
-        if (audioData.features[i].crepe_f0 < minF0Crepe) {
-            minF0Crepe = audioData.features[i].crepe_f0;
-        }
-        if (audioData.features[i].yin_periodicity < minPeriodicity) {
-            minPeriodicity = audioData.features[i].yin_periodicity;
-        }
-        if (audioData.features[i].crepe_confidence < minF0CrepeConfidence) {
-            minF0CrepeConfidence = audioData.features[i].crepe_confidence;
-        }
-        if (audioData.features[i].standard_deviation < minStandardDeviation) {
-            minStandardDeviation = audioData.features[i].standard_deviation;
-        }
-        if (
-            (audioData.features[i].spectral_centroid - audioData.features[i].standard_deviation / 2) <
-            minSpectralCentroidMinusStandardDeviation
-        ) {
-            minSpectralCentroidMinusStandardDeviation =
-                audioData.features[i].spectral_centroid - audioData.features[i].standard_deviation / 2;
-        }
-        if (audioData.features[i].brightness < minBrightness) {
-            minBrightness = audioData.features[i].brightness;
-        }
-        if (audioData.features[i].sharpness < minSharpness) {
-            minSharpness = audioData.features[i].sharpness;
-        }
-        if (audioData.features[i].loudness < minLoudness) {
-            minLoudness = audioData.features[i].loudness;
-        }
-    }
+            // const pPitchF0OrSC = perceivedPitchF0OrSC(f.yin_periodicity, f.crepe_f0, f.spectral_centroid);
+            // if (pPitchF0OrSC > maxPerceivedPitchF0OrSC) maxPerceivedPitchF0OrSC = pPitchF0OrSC;
+        
+            // const pPitchF0OrSC_weighted = perceivedPitchF0OrSC(f.yin_periodicity, f.crepe_f0, f.weighted_spectral_centroid);
+            // if (pPitchF0OrSC_weighted > maxPerceivedPitchF0OrSC_weighted) maxPerceivedPitchF0OrSC_weighted = pPitchF0OrSC_weighted;
 
+            // const pPitchF0Candidates = perceivedPitchF0Candidates(f.yin_periodicity, f.f0_candidates, f.spectral_centroid);
+            // if (pPitchF0Candidates > maxPerceivedPitchF0Candidates) maxPerceivedPitchF0Candidates = pPitchF0Candidates;
 
-    // Log the minimum values to verify correctness
-    console.log("Minimum Values:");
-    console.log("Min Amplitude:", minAmplitude);
-    console.log("Min Zerocrossingrate:", minZerocrossingrate);
-    console.log("Min Spectral Centroid:", minSpectralCentroid);
-    console.log("Min Spectral Bandwidth:", minSpectralBandwidth);
-    console.log("Min Spectral Flatness:", minSpectralFlatness);
-    console.log("Min Spectral Flux:", minSpectralFlux);
-    console.log("Min Yin F0 Librosa:", minYinF0Librosa);
-    console.log("Min Yin F0 Aubio:", minYinF0Aubio);
-    console.log("Min Crepe F0:", minF0Crepe);
-    console.log("Min Periodicity:", minPeriodicity);
-    console.log("Min Crepe Confidence:", minF0CrepeConfidence);
-    console.log("Min Standard Deviation:", minStandardDeviation);
-    console.log("Min Spectral Centroid - Std Dev:", minSpectralCentroidMinusStandardDeviation);
-    console.log("Min Brightness:", minBrightness);
-    console.log("Min Sharpness:", minSharpness);
-    console.log("Min Loudness:", minLoudness);
+            // const pCentroidBandwidthWeight = spectralCentroidWithBandwidthWeight(f.weighted_spectral_centroid, f.spectral_bandwidth);
+            // if (pCentroidBandwidthWeight > maxSpecralCentroidWeigthedBandwidth) maxSpecralCentroidWeigthedBandwidth = pCentroidBandwidthWeight;
 
+            // const pCentroidPeakBandwidth = computeBlendedTonalY(f.spectral_peak, f.weighted_spectral_centroid, f.spectral_bandwidth);
+            // if (pCentroidPeakBandwidth > maxCentroidPeakBandwidth) maxCentroidPeakBandwidth = pCentroidPeakBandwidth;
 
+            // const pCentroidPeakBandwidthProminence = computeTonalYWithProminenceDb({
+            //     periodicity: f.yin_periodicity,
+            //     crepeF0: f.crepe_f0,
+            //     spectralCentroidHz: f.weighted_spectral_centroid,
+            //     spectralBandwidthHz: f.spectral_bandwidth,
+            //     localPeakHz: f.spectral_peak,
+            //     prominenceDb: f.spectral_peak_prominence_db
+            //   });
+            // if (pCentroidPeakBandwidthProminence > maxCentroidPeakBandwidthProminence) maxCentroidPeakBandwidthProminence = pCentroidPeakBandwidthProminence;
+        // }
 
-    // Step 2: Normalize each feature
-    for (let i = 0; i < audioData.features.length; i++) {
-        const feature = audioData.features[i];
-        feature.normalizedAmplitude = feature.amplitude / maxAmplitude || 0;
-        feature.normalizedZerocrossingrate = feature.zerocrossingrate / maxZerocrossingrate || 0;
-        feature.normalizedSpectralCentroid = feature.spectral_centroid / maxSpectralCentroid || 0;
-        feature.normalizedSpectralFlux = feature.spectral_flux / maxSpectralFlux || 0;
-        feature.normalizedYinF0Librosa = feature.yin_f0_librosa / maxYinF0Librosa || 0;
-        feature.normalizedYinF0Aubio = feature.yin_f0_aubio / maxYinF0Aubio || 0;
-        feature.normalizedF0Crepe = feature.crepe_f0 / maxF0Crepe || 0;
-        feature.normalizedF0CrepeConfidence = feature.crepe_confidence / maxF0CrepeConfidence || 0;
-        feature.normalizedStandardDeviation = feature.standard_deviation / maxStandardDeviation || 0;
-        feature.normalizedSpectralCentroidMinusStandardDeviation = 
-            (feature.spectral_centroid - feature.standard_deviation / 2) / maxSpectralCentroidMinusStandardDeviation || 0;
-        feature.normalizedBrightness = feature.brightness / maxBrightness || 0;
-        feature.normalizedSharpness = feature.sharpness / maxSharpness || 0;
-        feature.normalizedLoudness = feature.loudness / maxLoudness || 0;
-    }
-    
-    let maxLogSpectralCentroid = Math.log10(maxSpectralCentroid + 1);
-    let minLogSpectralCentroid = Math.log10(1);
+        // Initialize min values to the largest possible value
+        // let minSpectralCentroid = Number.MAX_SAFE_INTEGER;
+        // let minSpectralCentroidWeigthed = Number.MAX_SAFE_INTEGER;
+        // let minF0Crepe = Number.MAX_SAFE_INTEGER;
+        // let minPerceivedPitchF0OrSC_weighted = Number.MAX_SAFE_INTEGER;
+        // let minLoudness = Number.MAX_SAFE_INTEGER;
+        // let minLoudnessPeriodicity = Number.MAX_SAFE_INTEGER;
+        // let minLoudnessCrepeConfidence = Number.MAX_SAFE_INTEGER;
+        // let minSharpness = Number.MAX_SAFE_INTEGER;
+        // let minMirMpsRoughness = Number.MAX_SAFE_INTEGER;
+        // let minMirSharpnessZwicker = Number.MAX_SAFE_INTEGER;
+        // let minMirRoughnessVassilakis = Number.MAX_SAFE_INTEGER;
+        // let minF0CrepeConfidence = Number.MAX_SAFE_INTEGER;
+        // let minPeriodicity = Number.MAX_SAFE_INTEGER;
+        // let minSpectralFlux = Number.MAX_SAFE_INTEGER;
+        // let minSpectralFlatness = Number.MAX_SAFE_INTEGER;
+        // let minSpectralBandwidth = Number.MAX_SAFE_INTEGER;
+        // let minSpectralPeak = Number.MAX_SAFE_INTEGER;
+        // let minSpectralPeakProminenceDb = Number.MAX_SAFE_INTEGER;
+        // let minSpectralPeakProminenceNorm = Number.MAX_SAFE_INTEGER;
+        // let minMultipeakCentroid = Number.MAX_SAFE_INTEGER;
+        // let minAmplitude = Number.MAX_SAFE_INTEGER;
+        // let minZerocrossingrate = Number.MAX_SAFE_INTEGER;
+        // let minYinF0Librosa = Number.MAX_SAFE_INTEGER;
+        // let minYinF0Aubio = Number.MAX_SAFE_INTEGER;
+        // let minStandardDeviation = Number.MAX_SAFE_INTEGER;
+        // let minBrightness = Number.MAX_SAFE_INTEGER;
+        // let minF0Candidates = Number.MAX_SAFE_INTEGER;
+        // let minMirRoughnessZwicker = Number.MAX_SAFE_INTEGER;
+        // let minMirRoughnessSethares = Number.MAX_SAFE_INTEGER;
+        // let minPerceivedPitch = Number.MAX_SAFE_INTEGER;
+        // let minPerceivedPitchLibrosa = Number.MAX_SAFE_INTEGER;
+        // let minPerceivedPitchLibrosaPeriodicity = Number.MAX_SAFE_INTEGER;
+        // let minPerceivedPitchCrepePeriodicity = Number.MAX_SAFE_INTEGER;
+        // let minPerceivedPitchF0OrSC = Number.MAX_SAFE_INTEGER;
+        // let minPerceivedPitchF0Candidates = Number.MAX_SAFE_INTEGER;
+        // let minSpecralCentroidWeigthedBandwidth = Number.MAX_SAFE_INTEGER;
+        // let minCentroidPeakBandwidth = Number.MAX_SAFE_INTEGER;
+        // let minCentroidPeakBandwidthProminence = Number.MAX_SAFE_INTEGER;
+        // let minSpectralCentroidMinusStandardDeviation = Number.MAX_SAFE_INTEGER;
 
-    // Add padding (in pixels) to the top and adjust the bottom range
+        // for (let i = 0; i < audioData.features.length; i++)
+        // {
+        //     const f = audioData.features[i];
+        
+        //     // Skip silent frames
+        //     if (f.loudness === 0) continue;
+        
+        //     if (f.spectral_centroid < minSpectralCentroid) minSpectralCentroid = f.spectral_centroid;
+        //     if (f.weighted_spectral_centroid < minSpectralCentroidWeigthed) minSpectralCentroidWeigthed = f.weighted_spectral_centroid;
+        //     if (f.crepe_f0 < minF0Crepe) minF0Crepe = f.crepe_f0;
+        //     if (f.perceived_pitch_f0_or_SC_weighted < minPerceivedPitchF0OrSC_weighted) minPerceivedPitchF0OrSC_weighted = f.perceived_pitch_f0_or_SC_weighted;
+        //     if (f.loudness < minLoudness) minLoudness = f.loudness;
+        //     if (f.loudness_periodicity < minLoudnessPeriodicity) minLoudnessPeriodicity = f.loudness_periodicity;
+        //     if (f.loudness_pitchConf < minLoudnessCrepeConfidence) minLoudnessCrepeConfidence = f.loudness_pitchConf;
+        //     if (f.sharpness < minSharpness) minSharpness = f.sharpness;
+        //     if (f.mir_mps_roughness < minMirMpsRoughness) minMirMpsRoughness = f.mir_mps_roughness;
+        //     if (f.mir_sharpness_zwicker < minMirSharpnessZwicker) minMirSharpnessZwicker = f.mir_sharpness_zwicker;
+        //     if (f.mir_roughness_vassilakis < minMirRoughnessVassilakis) minMirRoughnessVassilakis = f.mir_roughness_vassilakis;
+        //     if (f.yin_periodicity < minPeriodicity) minPeriodicity = f.yin_periodicity;
+        //     if (f.crepe_confidence < minF0CrepeConfidence) minF0CrepeConfidence = f.crepe_confidence;
+            // if (f.amplitude < minAmplitude) minAmplitude = f.amplitude;
+            // if (f.zerocrossingrate < minZerocrossingrate) minZerocrossingrate = f.zerocrossingrate;
+            // if (f.spectral_bandwidth < minSpectralBandwidth) minSpectralBandwidth = f.spectral_bandwidth;
+            // if (f.spectral_peak < minSpectralPeak) minSpectralPeak = f.spectral_peak;
+            // if (f.spectral_peak_prominence_db < minSpectralPeakProminenceDb) minSpectralPeakProminenceDb = f.spectral_peak_prominence_db;
+            // if (f.spectral_peak_prominence_norm < minSpectralPeakProminenceNorm) minSpectralPeakProminenceNorm = f.spectral_peak_prominence_norm;
+            // if (f.multipeak_centroid < minMultipeakCentroid) minMultipeakCentroid = f.multipeak_centroid;
+            // if (f.spectral_flatness < minSpectralFlatness) minSpectralFlatness = f.spectral_flatness;
+            // if (f.spectral_flux < minSpectralFlux) minSpectralFlux = f.spectral_flux;
+            // if (f.yin_f0_librosa < minYinF0Librosa) minYinF0Librosa = f.yin_f0_librosa;
+            // if (f.yin_f0_aubio < minYinF0Aubio) minYinF0Aubio = f.yin_f0_aubio;
+            // if (f.standard_deviation < minStandardDeviation) minStandardDeviation = f.standard_deviation;
+            // const centroidMinusSD = f.spectral_centroid - f.standard_deviation / 2;
+            // if (centroidMinusSD < minSpectralCentroidMinusStandardDeviation) {
+            //     minSpectralCentroidMinusStandardDeviation = centroidMinusSD;
+            // }
+            // if (f.brightness < minBrightness) minBrightness = f.brightness;
+            // if (f.mir_roughness_zwicker < minMirRoughnessZwicker) minMirRoughnessZwicker = f.mir_roughness_zwicker;
+            // if (f.mir_roughness_sethares < minMirRoughnessSethares) minMirRoughnessSethares = f.mir_roughness_sethares;
+            
+            // const pPitch = perceivedPitch(f.crepe_confidence, f.crepe_f0, f.spectral_centroid);
+            // if (pPitch < minPerceivedPitch) minPerceivedPitch = pPitch;
 
-    let previousDots = []; // To store the scattered dots of the previous data point
+            // const pPitchLibrosa = perceivedPitchLibrosa(f.crepe_confidence, f.yin_f0_librosa, f.spectral_centroid);
+            // if (pPitchLibrosa < minPerceivedPitchLibrosa) minPerceivedPitchLibrosa = pPitchLibrosa;
 
-    // Loop through each time frame
-    let pathData = []; // Array to store attributes for each path
+            // const pPitchLibrosaPeriodicity = perceivedPitchLibrosaPeriodicity(f.yin_periodicity, f.yin_f0_librosa, f.spectral_centroid);
+            // if (pPitchLibrosaPeriodicity < minPerceivedPitchLibrosaPeriodicity) minPerceivedPitchLibrosaPeriodicity = pPitchLibrosaPeriodicity;
 
-    for (let i = 0; i < audioData.features.length; i++) {
-        let feature = audioData.features[i];
+            // const pPitchCrepePeriodicity = perceivedPitchCrepePeriodicity(f.yin_periodicity, f.crepe_f0, f.spectral_centroid);
+            // if (pPitchCrepePeriodicity < minPerceivedPitchCrepePeriodicity) minPerceivedPitchCrepePeriodicity = pPitchCrepePeriodicity;
 
-        // Calculate x position based on timestamp
-        // Calculate the x position based on the normalized timestamp
-        let x = map(
-            feature.timestamp, 
-            0, 
-            maxDuration, // Use the maximum duration for normalization
-            0, 
-            canvasWidth
-        );
+            // const pPitchF0OrSC = perceivedPitchF0OrSC(f.yin_periodicity, f.crepe_f0, f.spectral_centroid);
+            // if (pPitchF0OrSC < minPerceivedPitchF0OrSC) minPerceivedPitchF0OrSC = pPitchF0OrSC;
 
-        function drawYAxisScale(canvasHeight, minValue, maxValue, isLogarithmic = false, topPadding = 50) {
-            const svgCanvas = document.getElementById("svgCanvas");
-            const scaleGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            scaleGroup.setAttribute("class", "y-axis-scale");
+            // const pPitchF0OrSC_weighted = perceivedPitchF0OrSC(f.yin_periodicity, f.crepe_f0, f.weighted_spectral_centroid);
+            // if (pPitchF0OrSC_weighted < minPerceivedPitchF0OrSC_weighted) minPerceivedPitchF0OrSC_weighted = pPitchF0OrSC_weighted;
 
-            // Number of ticks
-            const numTicks = 10;
+            // const pPitchF0Candidates = perceivedPitchF0Candidates(f.yin_periodicity, f.f0_candidates, f.spectral_centroid);
+            // if (pPitchF0Candidates < minPerceivedPitchF0Candidates) minPerceivedPitchF0Candidates = pPitchF0Candidates;
 
-            for (let i = 0; i <= numTicks; i++) {
-                // Calculate linear value for this tick
-                const linearValue = minValue + (i / numTicks) * (maxValue - minValue);
+            // const pCentroidBandwidthWeight = spectralCentroidWithBandwidthWeight(f.weighted_spectral_centroid, f.spectral_bandwidth);
+            // if (pCentroidBandwidthWeight < minSpecralCentroidWeigthedBandwidth) minSpecralCentroidWeigthedBandwidth = pCentroidBandwidthWeight;
 
-                // Calculate position based on logarithmic scale with padding
-                const y = isLogarithmic
-                    ? map(Math.log10(linearValue), Math.log10(minValue), Math.log10(maxValue), canvasHeight - topPadding, topPadding)
-                    : map(linearValue, minValue, maxValue, canvasHeight - topPadding, topPadding);
+            // const pCentroidPeakBandwidth = computeBlendedTonalY(f.spectral_peak, f.weighted_spectral_centroid, f.spectral_bandwidth);
+            // if (pCentroidPeakBandwidth < minCentroidPeakBandwidth) minCentroidPeakBandwidth = pCentroidPeakBandwidth;
 
-                // Create tick line
-                const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                tick.setAttribute("x1", 0); // Adjust for position
-                tick.setAttribute("x2", 10); // Length of the tick
-                tick.setAttribute("y1", y);
-                tick.setAttribute("y2", y);
-                tick.setAttribute("stroke", "black");
-                scaleGroup.appendChild(tick);
+            // const pCentroidPeakBandwidthProminence = computeTonalYWithProminenceDb({
+            //     periodicity: f.yin_periodicity,
+            //     crepeF0: f.crepe_f0,
+            //     spectralCentroidHz: f.weighted_spectral_centroid,
+            //     spectralBandwidthHz: f.spectral_bandwidth,
+            //     localPeakHz: f.spectral_peak,
+            //     prominenceDb: f.spectral_peak_prominence_db
+            //   });
+            // if (pCentroidPeakBandwidthProminence < minCentroidPeakBandwidthProminence) minCentroidPeakBandwidthProminence = pCentroidPeakBandwidthProminence;
+        // }
 
-                // Create label showing linear value
-                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                label.setAttribute("x", 15); // Position the label
-                label.setAttribute("y", y + 3); // Center the label
-                label.setAttribute("font-size", "10");
-                label.textContent = linearValue.toFixed(2); // Show linear value
-                scaleGroup.appendChild(label);
+        //! Not used anywhere
+        // for (let i = 0; i < audioData.features.length; i++)
+        // {
+        //     const f = audioData.features[i];
+        
+        //     f.normalizedSpectralCentroid = f.spectral_centroid / maxSpectralCentroid || 0;
+        //     f.normalizedSpectralCentroidWeighted = f.weighted_spectral_centroid / maxSpectralCentroid || 0;
+        //     f.normalizedF0Crepe = f.crepe_f0 / maxF0Crepe || 0;
+        //     f.normalizedLoudness = f.loudness / maxLoudness || 0;
+        //     f.normalizedLoudnessPeriodicity = f.loudness_periodicity / maxLoudnessPeriodicity || 0;
+        //     f.normalizedLoudnessCrepeConfidence = f.loudness_pitchConf / maxLoudnessCrepeConfidence || 0;
+        //     f.normalizedSharpness = f.sharpness / maxSharpness || 0;
+        //     f.normalizedMirMpsRoughness = f.mir_mps_roughness / maxMirMpsRoughness || 0;
+        //     f.normalizedMirSharpnessZwicker = f.mir_sharpness_zwicker / maxMirSharpnessZwicker || 0;
+        //     f.normalizedMirRoughnessVassilakis = f.mir_roughness_vassilakis / maxMirRoughnessVassilakis || 0;
+        //     f.normalizedPeriodicity = f.yin_periodicity / maxPeriodicity || 0;
+        //     f.normalizedF0CrepeConfidence = f.crepe_confidence / maxF0CrepeConfidence || 0;
+        //     // f.normalizedAmplitude = f.amplitude / maxAmplitude || 0;
+        //     // f.normalizedZerocrossingrate = f.zerocrossingrate / maxZerocrossingrate || 0;
+        //     // f.normalizedSpectralFlux = f.spectral_flux / maxSpectralFlux || 0;
+        //     // f.normalizedYinF0Librosa = f.yin_f0_librosa / maxYinF0Librosa || 0;
+        //     // f.normalizedYinF0Aubio = f.yin_f0_aubio / maxYinF0Aubio || 0;
+        //     // f.normalizedStandardDeviation = f.standard_deviation / maxStandardDeviation || 0;
+        
+        //     // const centroidMinusSD = f.spectral_centroid - f.standard_deviation / 2;
+        //     // f.normalizedSpectralCentroidMinusStandardDeviation =
+        //     //     centroidMinusSD / maxSpectralCentroidMinusStandardDeviation || 0;
+        
+        //     // f.normalizedBrightness = f.brightness / maxBrightness || 0;
+        
+        //     // f.normalizedMirRoughnessZwicker = f.mir_roughness_zwicker / maxMirRoughnessZwicker || 0;
+        //     // f.normalizedMirRoughnessSethares = f.mir_roughness_sethares / maxMirRoughnessSethares || 0;
+        // }
+        
+        // let maxLogSpectralCentroid = Math.log10(maxSpectralCentroid + 1);
+        // let minLogSpectralCentroid = Math.log10(1);
+
+        // Add padding (in pixels) to the top and adjust the bottom range
+
+        //! Create config dynamically
+        const featureConfig = {};
+        rawFeatureNames.forEach(name =>
+        {
+            featureConfig[name] =
+            {
+                val: (feature) => feature[name],
+                min: (isGlobalClampEnabled && clampConfig[name]) ? robustStats[name].min : minFeatureValues[name],
+                max: (isGlobalClampEnabled && clampConfig[name]) ? robustStats[name].max : maxFeatureValues[name],
+                median: (isGlobalClampEnabled && clampConfig[name]) ? robustStats[name].clamped_median : robustStats[name].median,
             }
+        });
+        //! Temporarily adding this #tmpf0
+        featureConfig["perceived_pitch_f0_or_SC_weighted"].val = (feature) => perceivedPitchF0OrSC(feature[periodicity_selector],feature.crepe_f0,feature.weighted_spectral_centroid,threshold_value,gamma_value); // tmp just for testing the slider
 
-            // Add the group to the canvas
-            svgCanvas.appendChild(scaleGroup);
-        }
-        const isLogSelected = document.getElementById("log-linear").checked;
-
-        // Example usage
-        const canvasHeight = 800;
-        const minValue = 100;
-        const maxValue = 3000;
-        let topPadding = 200; // Top padding in pixels
-        drawYAxisScale(canvasHeight, minValue, maxValue, isLogSelected, topPadding);
-
-        // Utility function for mapping
-        function map(value, start1, stop1, start2, stop2) {
-            return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
-        }
-
-
-        // Assuming slider values are already initialized and stored in variables
-        function getDynamicRange(slider) {
-            const values = slider.noUiSlider.get(); // Get the current slider range as [min, max]
-            const minValue = parseFloat(values[0]);
-            const maxValue = parseFloat(values[1]);
-            return { minValue, maxValue };
-        }
-
-        function calculateDynamicRange(slider, isInverted, startKey = "startRange", endKey = "endRange") {
-            const [minValue, maxValue] = slider.noUiSlider.get().map(parseFloat);
-
-            const startRange = isInverted ? maxValue : minValue;
-            const endRange = isInverted ? minValue : maxValue;
-
-            return {
-                [startKey]: startRange,
-                [endKey]: endRange
-            };
-        }
-
-        function mapToLinearScale(value, minValue, maxValue, canvasHeight, topPadding = 50, invert = false) {
-            if (invert) {
-                // Inverted mapping: High values at the bottom, low values at the top
-                return map(
-                    value,                              // Raw linear value
-                    minValue,                           // Minimum linear value
-                    maxValue,                           // Maximum linear value
-                    topPadding,                         // Top of the canvas becomes bottom
-                    canvasHeight - topPadding           // Bottom of the canvas becomes top
-                );
-            } else {
-                // Standard mapping: Low values at the bottom, high values at the top
-                return map(
-                    value,                              // Raw linear value
-                    minValue,                           // Minimum linear value
-                    maxValue,                           // Maximum linear value
-                    canvasHeight - topPadding,          // Bottom of the canvas
-                    topPadding                          // Top of the canvas
-                );
+        const scaleInfo = getYAxisScaleFromConfig(featureConfig,selectedFeature5,scale);
+        if(scaleInfo)
+        {
+            const {min,max,labelFormatter} = scaleInfo;
+            if(min < minValue)
+            {
+                minValue = min;
             }
-        }
-
-        function mapToLogScale(value, minValue, maxValue, canvasHeight, topPadding = 50, invert = false) {
-            if (invert) {
-                // Inverted mapping: High values at the bottom, low values at the top
-                return map(
-                    Math.log10(value),                   // Logarithmic transformation of value
-                    Math.log10(minValue),               // Logarithmic min value
-                    Math.log10(maxValue),               // Logarithmic max value
-                    topPadding,                         // Top of the canvas becomes bottom
-                    canvasHeight - topPadding           // Bottom of the canvas becomes top
-                );
-            } else {
-                // Standard mapping: Low values at the bottom, high values at the top
-                return map(
-                    Math.log10(value),                   // Logarithmic transformation of value
-                    Math.log10(minValue),               // Logarithmic min value
-                    Math.log10(maxValue),               // Logarithmic max value
-                    canvasHeight - topPadding,          // Bottom of the canvas
-                    topPadding                          // Top of the canvas
-                );
+            if(max > maxValue)
+            {
+                maxValue = max;
             }
+            yAxisFormatter = labelFormatter;
+        }
+        else
+        {
+            console.warn(`Feature ${selectedFeature5} not found in config`);
         }
 
+        //! Save feature configurations
+        configurations.push(featureConfig);
 
-        // Example usage:
-        const slider5 = document.getElementById("slider-5"); // Get the slider element
-        const invertMappingCheckbox_y_axis = document.getElementById("invertMapping-5");
-        const isInverted_y_axis = invertMappingCheckbox_y_axis && invertMappingCheckbox_y_axis.checked;
+    });
 
-        // Get the dynamic range
-        const { startRange_y_axis, endRange_y_axis } = calculateDynamicRange(slider5, isInverted_y_axis, "startRange_y_axis", "endRange_y_axis");
+    pathData = {};
+    globalAudioData.data.forEach((audioData,fileIndex) =>
+    {
+        let previousDots = []; // To store the scattered dots of the previous data point
+        pathData[fileIndex] = []; // Array to store attributes for each path
+
+        const featureConfig = configurations[fileIndex]
+
+        //! Added this for "deterministic randomness"
+        rng = random_engine(0); // rng() is a global function (dont add 'const' or anything)
         
-        function adjustPeriodicity(yin_periodicity) {
-            threshold = 0.85;
-            return yin_periodicity > threshold ? 1 : 0;
-
-        }
-
-        let y_axis = 0;
-        switch (selectedFeature5) {
-            case "amplitude":
-                y_axis = map(feature.amplitude, minAmplitude, maxAmplitude, endRange_y_axis - topPadding, topPadding);
-                break;
-            case "zerocrossingrate":
-                y_axis = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "spectral_centroid":
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(feature.spectral_centroid+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(feature.spectral_centroid+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                break;
-            case "perceived_pitch":
-                // y_axis = map(((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/1.5) , 0, maxSpectralCentroid, startRange_y_axis, endRange_y_axis);
-                // console.log((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/4);
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(((feature.crepe_f0 * feature.crepe_confidence) + ((feature.spectral_centroid * (1-feature.crepe_confidence))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(((feature.crepe_f0 * feature.crepe_confidence) + ((feature.spectral_centroid * (1-feature.crepe_confidence))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                break;
-            case "perceived_pitch-librosa":
-                // y_axis = map(((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/1.5) , 0, maxSpectralCentroid, startRange_y_axis, endRange_y_axis);
-                //console.log((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/4);
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(((feature.yin_f0_librosa * feature.crepe_confidence) + ((feature.spectral_centroid * (1-feature.crepe_confidence))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(((feature.yin_f0_librosa * feature.crepe_confidence) + ((feature.spectral_centroid * (1-feature.crepe_confidence))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                break;
-            case "perceived_pitch-librosa-periodicity":
-                // y_axis = map(((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/1.5) , 0, maxSpectralCentroid, startRange_y_axis, endRange_y_axis);
-                //console.log((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/4);
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(((feature.yin_f0_librosa * feature.yin_periodicity) + ((feature.spectral_centroid * (1-feature.yin_periodicity))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(((feature.yin_f0_librosa * feature.yin_periodicity) + ((feature.spectral_centroid * (1-feature.yin_periodicity))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                break;
-            case "perceived_pitch-crepe-periodicity":
-                // y_axis = map(((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/1.5) , 0, maxSpectralCentroid, startRange_y_axis, endRange_y_axis);
-                //console.log((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/4);
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(((feature.crepe_f0 * feature.yin_periodicity) + ((feature.spectral_centroid * (1-feature.yin_periodicity))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(((feature.crepe_f0 * feature.yin_periodicity) + ((feature.spectral_centroid * (1-feature.yin_periodicity))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                break;
-            case "perceived_pitch-f0-or-SC":
-                // y_axis = map(((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/1.5) , 0, maxSpectralCentroid, startRange_y_axis, endRange_y_axis);
-                //console.log((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/4);
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(((feature.crepe_f0 * adjustPeriodicity(feature.yin_periodicity)) + ((feature.spectral_centroid * (1-adjustPeriodicity(feature.yin_periodicity)))*0.30)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(((feature.crepe_f0 * adjustPeriodicity(feature.yin_periodicity)) + ((feature.spectral_centroid * (1-adjustPeriodicity(feature.yin_periodicity)))*0.30)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                break;
-            case "perceived_pitch-f0_candidates-periodicity":
-                // y_axis = map(((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/1.5) , 0, maxSpectralCentroid, startRange_y_axis, endRange_y_axis);
-                //console.log((feature.crepe_f0 * feature.crepe_confidence) + (feature.spectral_centroid * (1-feature.crepe_confidence))/4);
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(((feature.f0_candidates * feature.yin_periodicity) + ((feature.spectral_centroid * (1-feature.yin_periodicity))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(((feature.f0_candidates * feature.yin_periodicity) + ((feature.spectral_centroid * (1-feature.yin_periodicity))*0.2)), minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                break;
-            case "spectral_flux":
-                y_axis = map(feature.spectral_flux, minSpectralFlux, maxSpectralFlux, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "spectral_bandwidth":
-                y_axis = map(feature.spectral_bandwidth, 0, maxSpectralBandwidth, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "spectral_flatness":
-                y_axis = map(feature.spectral_flatness, 0, maxSpectralFlatness, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "yin_f0_librosa":
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(feature.yin_f0_librosa+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(feature.yin_f0_librosa+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                // y_axis = map(feature.yin_f0_librosa, 0, maxYinF0Librosa, startRange_y_axis, endRange_y_axis);
-                break;
-            case "yin_f0_aubio":
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(feature.yin_f0_aubio+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(feature.yin_f0_aubio+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                // y_axis = map(feature.yin_f0_aubio, 0, maxYinF0Aubio, startRange_y_axis, endRange_y_axis);
-                break;
-            case "f0_crepe":
-                if (isLogSelected) {
-                    y_axis = mapToLogScale(feature.crepe_f0+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                } else {
-                    y_axis = mapToLinearScale(feature.crepe_f0+1, minValue, maxValue, canvasHeight, topPadding, isInverted_y_axis);
-                }
-                // y_axis = map(feature.crepe_f0, 0, maxF0Crepe, startRange_y_axis, endRange_y_axis);
-                break;
-            case "f0_crepe_condidence":
-                y_axis = map(feature.crepe_confidence, 0, maxF0CrepeConfidence, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "yin_periodicity":
-                y_axis = map(feature.yin_periodicity, maxPeriodicity, 0, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "f0_candidates":
-                y_axis = map(feature.f0_candidates, maxF0Candidates, 0, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "spectral_deviation":
-                y_axis = map(feature.standard_deviation, 0, maxStandardDeviation, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "normalized_height":
-                y_axis = map((feature.spectral_centroid - feature.standard_deviation/2)+600, 0, maxSpectralCentroidMinusStandardDeviation, startRange_y_axis, endRange_y_axis);
-                break;
-            case "brightness":
-                y_axis = map(feature.brightness, 0, maxBrightness, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "sharpness":
-                y_axis = map(feature.sharpness, 0, maxSharpness, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "loudness":
-                y_axis = map(feature.loudness, 0, maxLoudness, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-                break;
-            case "none":
-                y_axis = 400
-                break;
-            default:
-                y_axis = map(feature.spectral_centroid, 0, maxSpectralCentroid, startRange_y_axis + topPadding, endRange_y_axis - topPadding);
-        }
-        // // Calculate line length based on amplitude
-        // let lineLength = map(feature.amplitude, 0, maxAmplitude, 0, 80);
-
-        // Example usage:
-        const slider1 = document.getElementById("slider-1"); // Get the slider element
-        const invertMappingCheckbox_lineLength = document.getElementById("invertMapping-1");
-        const isInverted_lineLength = invertMappingCheckbox_lineLength && invertMappingCheckbox_lineLength.checked;
-
-        // Get the dynamic range
-        const { startRange_lineLength, endRange_lineLength } = calculateDynamicRange(slider1, isInverted_lineLength, "startRange_lineLength", "endRange_lineLength");
-
-        // console.log(startRange_lineLength, endRange_lineLength)
-
-
-
-        // const scaleKnob = document.getElementById("scaleKnob");
-        // const scaleValueDisplay = document.getElementById("scaleValue");
-        // let scaleCompression = parseFloat(scaleKnob.value); // Initial scale value
-
-        // // Update the scale value when the knob changes
-        // scaleKnob.addEventListener("input", (event) => {
-        //     scaleCompression = parseFloat(event.target.value);
-        //     scaleValueDisplay.textContent = scaleCompression.toFixed(1); // Display the current scale value
-        //     console.log(`Compression scale set to: ${scaleCompression}`);
-        // });
-
-        // Use the updated scaleCompression in your mapping
-        function mapWithSoftClipping(value, minInput, maxInput, minOutput, maxOutput, scale = scaleCompression) {
-            const normalized = (value - minInput) / (maxInput - minInput); // Normalize to [0, 1]
-            const clipped = Math.atan(scale * (normalized - 0.5)) / Math.atan(scale) + 0.5; // Adjust scale for soft clipping
-            return clipped * (maxOutput - minOutput) + minOutput;
-        }
-
-        // // Check if inversion is required for the selected feature
-        // const invertMappingCheckbox_lineLength = document.getElementById("invertMapping-1"); // Update ID as needed
-        // const isInverted_lineLength = invertMappingCheckbox_lineLength && invertMappingCheckbox_lineLength.checked;
-
-        // // Determine the range based on inversion state
-        // let startRange_lineLength = isInverted_lineLength ? 0 : 80; // Swap the start range if inverted
-        // let endRange_lineLength = isInverted_lineLength ? 80 : 0; // Swap the end range if inverted
-        // Calculate line length based on selected feature1
-        let lineLength = 0;
-        // Define parameters
-        const BaseLength = 2; // Minimum line length
-        const MaxEffect = 80;  // Maximum effect of loudness on line length
-        switch (selectedFeature1) {
-            case "amplitude":
-                lineLength = mapWithSoftClipping(feature.amplitude, minAmplitude, maxAmplitude, startRange_lineLength, endRange_lineLength, scaleCompression);
-                break;
-            case "zerocrossingrate":
-                lineLength = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_lineLength, endRange_lineLength);
-                break;
-            case "spectral_centroid":
-                lineLength = map(feature.spectral_centroid, 0, maxSpectralCentroid, startRange_lineLength, endRange_lineLength);
-                break;
-            case "spectral_flux":
-                lineLength = map(feature.spectral_flux, minSpectralFlux, maxSpectralFlux, startRange_lineLength, endRange_lineLength);
-                break;
-            case "spectral_bandwidth":
-                lineLength = map(feature.spectral_bandwidth, minSpectralBandwidth, maxSpectralBandwidth, startRange_lineLength, endRange_lineLength);
-                break;
-            case "spectral_flatness":
-                lineLength = map(feature.spectral_flatness, minSpectralFlatness, maxSpectralFlatness, startRange_lineLength, endRange_lineLength);
-                break;
-            case "yin_f0_librosa":
-                lineLength = map(feature.yin_f0_librosa, minYinF0Librosa, maxYinF0Librosa, startRange_lineLength, endRange_lineLength);
-                break;
-            case "yin_f0_aubio":
-                lineLength = map(feature.yin_f0_aubio, minYinF0Aubio, maxYinF0Aubio, startRange_lineLength, endRange_lineLength);
-                break;
-            case "f0_crepe":
-                lineLength = map(feature.crepe_f0, minF0Crepe, maxF0Crepe, startRange_lineLength, endRange_lineLength);
-                break;
-            case "f0_crepe_condidence":
-                lineLength = map(feature.crepe_confidence, minF0CrepeConfidence, maxF0CrepeConfidence, startRange_lineLength, endRange_lineLength);
-                break;
-            case "yin_periodicity":
-                lineLength = map(feature.yin_periodicity, minPeriodicity, maxPeriodicity, startRange_lineLength, endRange_lineLength);
-                break;
-            case "spectral_deviation":
-                lineLength = map(feature.standard_deviation, minStandardDeviation, maxStandardDeviation, startRange_lineLength, endRange_lineLength);
-                break;
-            case "brightness":
-                lineLength = map(feature.brightness, minBrightness, maxBrightness, startRange_lineLength, endRange_lineLength);
-                break;
-            case "sharpness":
-                lineLength = map(feature.sharpness, minSharpness, maxSharpness, startRange_lineLength, endRange_lineLength);
-                break;
-            case "loudness":
-                lineLength = map(feature.loudness, minLoudness, maxLoudness, startRange_lineLength, endRange_lineLength);
-                break;
-            case "loudness-zcr":
-                
-                const MaxZCR = maxZerocrossingrate; // Replace with the actual maximum ZCR
-
-                // Calculate the contribution of loudness and ZCR
-                let ZCRLoudnessEffect = map(feature.loudness, 0, maxLoudness, 0, endRange_lineLength);
-                let ZCRInfluence = feature.zerocrossingrate / MaxZCR;
-
-                // Combine loudness and ZCR to calculate the line length
-                lineLength = startRange_lineLength + (ZCRLoudnessEffect * ZCRInfluence);
-                break;
-            case "loudness-periodicity":
-                const MaxPeriodicity = maxPeriodicity; // Replace with the actual maximum ZCR
-
-                // Calculate the contribution of loudness and ZCR
-                let PeriodicityLoudnessEffect = map(feature.loudness, minLoudness, maxLoudness, 0, endRange_lineLength);
-                let InvertedPeriodicity = MaxPeriodicity - feature.yin_periodicity;
-
-                let PeriodicityInfluence = InvertedPeriodicity / MaxPeriodicity;
-
-                // Combine loudness and ZCR to calculate the line length
-                lineLength = startRange_lineLength + (PeriodicityLoudnessEffect * PeriodicityInfluence);
-                break;
-            case "loudness-pitchConf":
-                // Define parameters
-                
-                const MaxPitchConfidence = maxF0CrepeConfidence; // Replace with the actual maximum ZCR
-                
-                // Calculate the contribution of loudness and ZCR
-                let crepeLoudnessEffect = map(feature.loudness, minLoudness, maxLoudness, 0, endRange_lineLength);
-                let InvertedPitchConfInfluence = 1 - (feature.crepe_confidence / MaxPitchConfidence); // Invert pitch confidence
-
-                // Combine loudness and ZCR to calculate the line length
-                lineLength = startRange_lineLength + (crepeLoudnessEffect * InvertedPitchConfInfluence);
-                break;
-            case "none":
-                lineLength = 1
-                break;
-            default:
-                lineLength = map(feature.amplitude, 0, maxAmplitude, startRange_lineLength, endRange_lineLength);
-        }
-        const slider2 = document.getElementById("slider-2"); // Get the slider element
-        const invertMappingCheckbox_lineWidth = document.getElementById("invertMapping-2");
-        const isInverted_lineWidth = invertMappingCheckbox_lineWidth && invertMappingCheckbox_lineWidth.checked;
-
-        // Get the dynamic range
-        const { startRange_lineWidth, endRange_lineWidth } = calculateDynamicRange(slider2, isInverted_lineWidth, "startRange_lineWidth", "endRange_lineWidth");
+        //! Added this
+        const isHidden = !document.getElementById(`toggle-${fileIndex}`).isActive;
+        const pathGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        pathGroup.id = `audio-path-${fileIndex}`; // Add unique id
+        pathGroup.style.display = isHidden ? "none" : "inline";
+        // pathGroup.classList.add(`audio-path-${fileIndex}`); // Add unique class
         
-        // Check if inversion is required for the selected feature
-        // const invertMappingCheckbox_lineWidth = document.getElementById("invertMapping-2"); // Update ID as needed
-        // const isInverted_lineWidth = invertMappingCheckbox_lineWidth && invertMappingCheckbox_lineWidth.checked;
+        //let colorHue = hexToHSL(huePicker.value); // Convert hex to HSL
+        // const colorHue = getFileBaseHue(fileIndex);
+        const colorHue = Number(document.getElementById(`color-slider-${fileIndex}`).value);
+        //! Added these
+        const hue1 = ((colorHue - 30) + 360) % 360; // analogous color
+        const hue2 = ((colorHue + 30) + 360) % 360; // analogous color
 
-        // Determine the range based on inversion state
-        // let startRange_lineWidth = isInverted_lineWidth ? 1 : 5; // Swap the start range if inverted
-        // let endRange_lineWidth = isInverted_lineWidth ? 5 : 1; // Swap the end range if inverted
-        // Calculate line width based on selected feature2
-        let lineWidth = 1;
-        switch (selectedFeature2) {
-            case "amplitude":
-                lineWidth = map(feature.amplitude, minAmplitude, maxAmplitude, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "zerocrossingrate":
-                lineWidth = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "spectral_centroid":
-                lineWidth = map(feature.spectral_centroid, minSpectralCentroid, maxSpectralCentroid, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "spectral_flux":
-                lineWidth = map(feature.spectral_flux, minSpectralFlux, maxSpectralFlux, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "spectral_bandwidth":
-                lineWidth = map(feature.spectral_bandwidth, minSpectralBandwidth, maxSpectralBandwidth, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "spectral_flatness":
-                lineWidth = map(feature.spectral_flatness, minSpectralFlatness, maxSpectralFlatness, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "yin_f0_librosa":
-                lineWidth = map(feature.yin_f0_librosa, minYinF0Librosa, maxYinF0Librosa, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "yin_f0_aubio":
-                lineWidth = map(feature.yin_f0_aubio, minYinF0Aubio, maxYinF0Aubio, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "f0_crepe":
-                lineWidth = map(feature.crepe_f0, minF0Crepe, maxF0Crepe, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "f0_crepe_condidence":
-                lineWidth = map(feature.crepe_confidence, minF0CrepeConfidence, maxF0CrepeConfidence, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "yin_periodicity":
-                lineWidth = map(feature.yin_periodicity, minPeriodicity, maxPeriodicity, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "spectral_deviation":
-                lineWidth = map(feature.standard_deviation, minStandardDeviation, maxStandardDeviation, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "brightness":
-                lineWidth = map(feature.brightness, minBrightness, maxBrightness, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "sharpness":
-                lineWidth = map(feature.sharpness, minSharpness, maxSharpness, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "loudness":
-                lineWidth = map(feature.loudness, minLoudness, maxLoudness, startRange_lineWidth, endRange_lineWidth);
-                break;
-            case "none":
-                lineWidth = 2
-                break;
-            default:
-                lineWidth = map(feature.amplitude, minAmplitude, maxAmplitude, startRange_lineWidth, endRange_lineWidth);
-        }
+        for (let i = 0; i < audioData.features.length; i++)
+        {
+            const feature = audioData.features[i];
 
-        const slider3 = document.getElementById("slider-3"); // Get the slider element
-        const invertMappingCheckbox_lineColorSaturation = document.getElementById("invertMapping-3");
-        const isInverted_lineColorSaturation = invertMappingCheckbox_lineColorSaturation && invertMappingCheckbox_lineColorSaturation.checked;
-
-        // Get the dynamic range
-        const { startRange_lineColorSaturation, endRange_lineColorSaturation } = calculateDynamicRange(slider3, isInverted_lineColorSaturation, "startRange_lineColorSaturation", "endRange_lineColorSaturation");
-        console.log("isInverted_lineColorSaturation", isInverted_lineColorSaturation);
-        console.log("startRange_lineColorSaturation", startRange_lineColorSaturation);
-        console.log("endRange_lineColorSaturation", endRange_lineColorSaturation);
-        
-        // Check if inversion is required for the selected feature
-        // const invertMappingCheckbox_lineColorSaturation = document.getElementById("invertMapping-3"); // Update ID as needed
-        // const isInverted_lineColorSaturation = invertMappingCheckbox_lineColorSaturation && invertMappingCheckbox_lineColorSaturation.checked;
-
-        // Determine the range based on inversion state
-        // let startRange_lineColorSaturation = isInverted_lineColorSaturation ? 0 : 100; // Swap the start range if inverted
-        // let endRange_lineColorSaturation = isInverted_lineColorSaturation ? 100 : 0; // Swap the end range if inverted
-        // Calculate color based on selected feature3
-        function adjustForSaturationPeriodicity(yin_periodicity) {
-            threshold = 0.3;
-            return yin_periodicity < threshold ? 0 : yin_periodicity;
-        }
-
-        function calibrateZCR(zcr, spectralCentroid, sampleRate, k = 1.0) {
-            let nyquist = sampleRate / 2; // Maximum possible spectral centroid
-            let normalizedSC = spectralCentroid / nyquist; // Normalize SC (0 to 1)
+            const xAxis = map(feature["timestamp"],0,maxDuration,0,canvasWidth);
             
-            let adjustedZCR = zcr / (1 + k * normalizedSC);
+            // const featureConfig = {
+            //     spectral_centroid: {
+            //       val: () => feature.spectral_centroid,
+            //       min: (isGlobalClampEnabled && clampConfig["spectral_centroid"]) ? robustStats["spectral_centroid"].min : minSpectralCentroid,
+            //       max: (isGlobalClampEnabled && clampConfig["spectral_centroid"]) ? robustStats["spectral_centroid"].max : maxSpectralCentroid,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     weighted_spectral_centroid: {
+            //       val: () => feature.weighted_spectral_centroid,
+            //       min: (isGlobalClampEnabled && clampConfig["weighted_spectral_centroid"]) ? robustStats["weighted_spectral_centroid"].min : minSpectralCentroidWeigthed,
+            //       max: (isGlobalClampEnabled && clampConfig["weighted_spectral_centroid"]) ? robustStats["weighted_spectral_centroid"].max : maxSpectralCentroidWeigthed,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     crepe_f0: {
+            //       val: () => feature.crepe_f0,
+            //       min: (isGlobalClampEnabled && clampConfig["crepe_f0"]) ? robustStats["crepe_f0"].min : minF0Crepe,
+            //       max: (isGlobalClampEnabled && clampConfig["crepe_f0"]) ? robustStats["crepe_f0"].max : maxF0Crepe,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     perceived_pitch_f0_or_SC_weighted: {
+            //       val: () => feature.perceived_pitch_f0_or_SC_weighted,
+            //       min: (isGlobalClampEnabled && clampConfig["perceived_pitch_f0_or_SC_weighted"]) ? robustStats["perceived_pitch_f0_or_SC_weighted"].min : minPerceivedPitchF0OrSC_weighted,
+            //       max: (isGlobalClampEnabled && clampConfig["perceived_pitch_f0_or_SC_weighted"]) ? robustStats["perceived_pitch_f0_or_SC_weighted"].max : maxPerceivedPitchF0OrSC_weighted,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     loudness: {
+            //       val: () => feature.loudness,
+            //       min: (isGlobalClampEnabled && clampConfig["loudness"]) ? robustStats["loudness"].min : minLoudness,
+            //       max: (isGlobalClampEnabled && clampConfig["loudness"]) ? robustStats["loudness"].max : maxLoudness,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     loudness_periodicity: {
+            //       val: () => feature.loudness_periodicity,
+            //       min: (isGlobalClampEnabled && clampConfig["loudness_periodicity"]) ? robustStats["loudness_periodicity"].min : minLoudnessPeriodicity,
+            //       max: (isGlobalClampEnabled && clampConfig["loudness_periodicity"]) ? robustStats["loudness_periodicity"].max : maxLoudnessPeriodicity,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     loudness_pitchConf: {
+            //       val: () => feature.loudness_pitchConf,
+            //       min: (isGlobalClampEnabled && clampConfig["loudness_pitchConf"]) ? robustStats["loudness_pitchConf"].min : minLoudnessCrepeConfidence,
+            //       max: (isGlobalClampEnabled && clampConfig["loudness_pitchConf"]) ? robustStats["loudness_pitchConf"].max : maxLoudnessCrepeConfidence,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     sharpness: {
+            //       val: () => feature.sharpness,
+            //       min: (isGlobalClampEnabled && clampConfig["sharpness"]) ? robustStats["sharpness"].min : minSharpness,
+            //       max: (isGlobalClampEnabled && clampConfig["sharpness"]) ? robustStats["sharpness"].max : maxSharpness,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     mir_mps_roughness: {
+            //       val: () => feature.mir_mps_roughness,
+            //       min: (isGlobalClampEnabled && clampConfig["mir_mps_roughness"]) ? robustStats["mir_mps_roughness"].min : minMirMpsRoughness,
+            //       max: (isGlobalClampEnabled && clampConfig["mir_mps_roughness"]) ? robustStats["mir_mps_roughness"].max : maxMirMpsRoughness,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     mir_sharpness_zwicker: {
+            //       val: () => feature.mir_sharpness_zwicker,
+            //       min: (isGlobalClampEnabled && clampConfig["mir_sharpness_zwicker"]) ? robustStats["mir_sharpness_zwicker"].min : minMirSharpnessZwicker,
+            //       max: (isGlobalClampEnabled && clampConfig["mir_sharpness_zwicker"]) ? robustStats["mir_sharpness_zwicker"].max : maxMirSharpnessZwicker,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     mir_roughness_vassilakis: {
+            //       val: () => feature.mir_roughness_vassilakis,
+            //       min: (isGlobalClampEnabled && clampConfig["mir_roughness_vassilakis"]) ? robustStats["mir_roughness_vassilakis"].min : minMirRoughnessVassilakis,
+            //       max: (isGlobalClampEnabled && clampConfig["mir_roughness_vassilakis"]) ? robustStats["mir_roughness_vassilakis"].max : maxMirRoughnessVassilakis,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     yin_periodicity: {
+            //       val: () => feature.yin_periodicity,
+            //       min: (isGlobalClampEnabled && clampConfig["yin_periodicity"]) ? robustStats["yin_periodicity"].min : minPeriodicity,
+            //       max: (isGlobalClampEnabled && clampConfig["yin_periodicity"]) ? robustStats["yin_periodicity"].max : maxPeriodicity,
+            //       softclipping: isSoftclipEnabled
+            //     },
+            //     crepe_confidence: {
+            //       val: () => feature.crepe_confidence,
+            //       min: (isGlobalClampEnabled && clampConfig["crepe_confidence"]) ? robustStats["crepe_confidence"].min : minF0CrepeConfidence,
+            //       max: (isGlobalClampEnabled && clampConfig["crepe_confidence"]) ? robustStats["crepe_confidence"].max : maxF0CrepeConfidence,
+            //       softclipping: isSoftclipEnabled
+            //     }
+                // amplitude: {
+                //   val: () => feature.amplitude,
+                //   min: (isGlobalClampEnabled && clampConfig["amplitude"]) ? robustStats["amplitude"].min : minAmplitude,
+                //   max: (isGlobalClampEnabled && clampConfig["amplitude"]) ? robustStats["amplitude"].max : maxAmplitude,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // zerocrossingrate: {
+                //   val: () => feature.zerocrossingrate,
+                //   min: (isGlobalClampEnabled && clampConfig["zerocrossingrate"]) ? robustStats["zerocrossingrate"].min : minZerocrossingrate,
+                //   max: (isGlobalClampEnabled && clampConfig["zerocrossingrate"]) ? robustStats["zerocrossingrate"].max : maxZerocrossingrate,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // calibrated_zerocrossingrate: {
+                //   val: () => calibrateZCR(feature.zerocrossingrate, feature.spectral_centroid, 44100),
+                //   min: (isGlobalClampEnabled && clampConfig["calibrated_zerocrossingrate"]) ? robustStats["zerocrossingrate"].min : minZerocrossingrate,
+                //   max: (isGlobalClampEnabled && clampConfig["calibrated_zerocrossingrate"]) ? robustStats["zerocrossingrate"].max : maxZerocrossingrate,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // spectral_flux: {
+                //   val: () => feature.spectral_flux,
+                //   min: (isGlobalClampEnabled && clampConfig["spectral_flux"]) ? robustStats["spectral_flux"].min : minSpectralFlux,
+                //   max: (isGlobalClampEnabled && clampConfig["spectral_flux"]) ? robustStats["spectral_flux"].max : maxSpectralFlux,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // spectral_bandwidth: {
+                //   val: () => feature.spectral_bandwidth,
+                //   min: (isGlobalClampEnabled && clampConfig["spectral_bandwidth"]) ? robustStats["spectral_bandwidth"].min : minSpectralBandwidth,
+                //   max: (isGlobalClampEnabled && clampConfig["spectral_bandwidth"]) ? robustStats["spectral_bandwidth"].max : maxSpectralBandwidth,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // spectral_peak: {
+                //   val: () => feature.spectral_peak,
+                //   min: (isGlobalClampEnabled && clampConfig["spectral_peak"]) ? robustStats["spectral_peak"].min : minSpectralPeak,
+                //   max: (isGlobalClampEnabled && clampConfig["spectral_peak"]) ? robustStats["spectral_peak"].max : maxSpectralPeak,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // spectral_peak_prominence_db: {
+                //   val: () => feature.spectral_peak_prominence_db,
+                //   min: (isGlobalClampEnabled && clampConfig["spectral_peak_prominence_db"]) ? robustStats["spectral_peak_prominence_db"].min : minSpectralPeakProminenceDb,
+                //   max: (isGlobalClampEnabled && clampConfig["spectral_peak_prominence_db"]) ? robustStats["spectral_peak_prominence_db"].max : maxSpectralPeakProminenceDb,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // spectral_peak_prominence_norm: {
+                //   val: () => feature.spectral_peak_prominence_norm,
+                //   min: (isGlobalClampEnabled && clampConfig["spectral_peak_prominence_norm"]) ? robustStats["spectral_peak_prominence_norm"].min : minSpectralPeakProminenceNorm,
+                //   max: (isGlobalClampEnabled && clampConfig["spectral_peak_prominence_norm"]) ? robustStats["spectral_peak_prominence_norm"].max : maxSpectralPeakProminenceNorm,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // multipeak_centroid: {
+                //     val: () => safeLogInput(feature.multipeak_centroid),
+                //     min: (isGlobalClampEnabled && clampConfig["multipeak_centroid"]) ? robustStats["multipeak_centroid"].min + 1 : minMultipeakCentroid + 1,
+                //     max: (isGlobalClampEnabled && clampConfig["multipeak_centroid"]) ? robustStats["multipeak_centroid"].max + 1 : maxMultipeakCentroid + 1,
+                //     softclipping: isSoftclipEnabled
+                //   },
+                // spectral_flatness: {
+                //   val: () => feature.spectral_flatness,
+                //   min: (isGlobalClampEnabled && clampConfig["spectral_flatness"]) ? robustStats["spectral_flatness"].min : minSpectralFlatness,
+                //   max: (isGlobalClampEnabled && clampConfig["spectral_flatness"]) ? robustStats["spectral_flatness"].max : maxSpectralFlatness,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // yin_f0_librosa: {
+                //   val: () => feature.yin_f0_librosa,
+                //   min: (isGlobalClampEnabled && clampConfig["yin_f0_librosa"]) ? robustStats["yin_f0_librosa"].min : minYinF0Librosa,
+                //   max: (isGlobalClampEnabled && clampConfig["yin_f0_librosa"]) ? robustStats["yin_f0_librosa"].max : maxYinF0Librosa,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // yin_f0_aubio: {
+                //   val: () => feature.yin_f0_aubio,
+                //   min: (isGlobalClampEnabled && clampConfig["yin_f0_aubio"]) ? robustStats["yin_f0_aubio"].min : minYinF0Aubio,
+                //   max: (isGlobalClampEnabled && clampConfig["yin_f0_aubio"]) ? robustStats["yin_f0_aubio"].max : maxYinF0Aubio,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // spectral_deviation: {
+                //   val: () => feature.standard_deviation,
+                //   min: (isGlobalClampEnabled && clampConfig["spectral_deviation"]) ? robustStats["standard_deviation"].min : minStandardDeviation,
+                //   max: (isGlobalClampEnabled && clampConfig["spectral_deviation"]) ? robustStats["standard_deviation"].max : maxStandardDeviation,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // brightness: {
+                //   val: () => feature.brightness,
+                //   min: (isGlobalClampEnabled && clampConfig["brightness"]) ? robustStats["brightness"].min : minBrightness,
+                //   max: (isGlobalClampEnabled && clampConfig["brightness"]) ? robustStats["brightness"].max : maxBrightness,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // mir_roughness_zwicker: {
+                //   val: () => feature.mir_roughness_zwicker,
+                //   min: (isGlobalClampEnabled && clampConfig["mir_roughness_zwicker"]) ? robustStats["mir_roughness_zwicker"].min : minMirRoughnessZwicker,
+                //   max: (isGlobalClampEnabled && clampConfig["mir_roughness_zwicker"]) ? robustStats["mir_roughness_zwicker"].max : maxMirRoughnessZwicker,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // mir_roughness_sethares: {
+                //   val: () => feature.mir_roughness_sethares,
+                //   min: (isGlobalClampEnabled && clampConfig["mir_roughness_sethares"]) ? robustStats["mir_roughness_sethares"].min : minMirRoughnessSethares,
+                //   max: (isGlobalClampEnabled && clampConfig["mir_roughness_sethares"]) ? robustStats["mir_roughness_sethares"].max : maxMirRoughnessSethares,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // weighted_spectral_centroid_bandwidth: {
+                //   val: () => spectralCentroidWithBandwidthWeight(feature.weighted_spectral_centroid, feature.spectral_bandwidth),
+                //   min: (isGlobalClampEnabled && clampConfig["weighted_spectral_centroid_bandwidth"]) ? robustStats["weighted_spectral_centroid_bandwidth"].min : minSpecralCentroidWeigthedBandwidth,
+                //   max: (isGlobalClampEnabled && clampConfig["weighted_spectral_centroid_bandwidth"]) ? robustStats["weighted_spectral_centroid_bandwidth"].max : maxSpecralCentroidWeigthedBandwidth,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // centroid_peak_bandwidth: {
+                //   val: () => computeBlendedTonalY(feature.spectral_peak, feature.weighted_spectral_centroid, feature.spectral_bandwidth),
+                //   min: (isGlobalClampEnabled && clampConfig["centroid_peak_bandwidth"]) ? robustStats["centroid_peak_bandwidth"].min : minCentroidPeakBandwidth,
+                //   max: (isGlobalClampEnabled && clampConfig["centroid_peak_bandwidth"]) ? robustStats["centroid_peak_bandwidth"].max : maxCentroidPeakBandwidth,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // centroid_peak_bandwidth_prominence: {
+                //     val: () => computeTonalYWithProminenceDb({
+                //         periodicity: feature.yin_periodicity,
+                //         crepeF0: feature.crepe_f0,
+                //         spectralCentroidHz: feature.weighted_spectral_centroid,
+                //         spectralBandwidthHz: feature.spectral_bandwidth,
+                //         localPeakHz: feature.spectral_peak,
+                //         prominenceDb: feature.spectral_peak_prominence_db
+                //       }),
+                //     min: (isGlobalClampEnabled && clampConfig["centroid_peak_bandwidth_prominence"]) ? robustStats["centroid_peak_bandwidth_prominence"].min : minCentroidPeakBandwidthProminence,
+                //     max: (isGlobalClampEnabled && clampConfig["centroid_peak_bandwidth_prominence"]) ? robustStats["centroid_peak_bandwidth_prominence"].max : maxCentroidPeakBandwidthProminence,
+                //     softclipping: isSoftclipEnabled
+                //   },
+                // perceived_pitch: {
+                //   val: () => perceivedPitch(feature.crepe_confidence, feature.crepe_f0, feature.spectral_centroid),
+                //   min: (isGlobalClampEnabled && clampConfig["perceived_pitch"]) ? robustStats["perceived_pitch"].min : minPerceivedPitch,
+                //   max: (isGlobalClampEnabled && clampConfig["perceived_pitch"]) ? robustStats["perceived_pitch"].max : maxPerceivedPitch,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // perceived_pitch_librosa: {
+                //   val: () => perceivedPitchLibrosa(feature.crepe_confidence, feature.yin_f0_librosa, feature.spectral_centroid),
+                //   min: (isGlobalClampEnabled && clampConfig["perceived_pitch_librosa"]) ? robustStats["perceived_pitch_librosa"].min : minPerceivedPitchLibrosa,
+                //   max: (isGlobalClampEnabled && clampConfig["perceived_pitch_librosa"]) ? robustStats["perceived_pitch_librosa"].max : maxPerceivedPitchLibrosa,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // perceived_pitch_librosa_periodicity: {
+                //   val: () => perceivedPitchLibrosaPeriodicity(feature.yin_periodicity, feature.yin_f0_librosa, feature.spectral_centroid),
+                //   min: (isGlobalClampEnabled && clampConfig["perceived_pitch_librosa_periodicity"]) ? robustStats["perceived_pitch_librosa_periodicity"].min : minPerceivedPitchLibrosaPeriodicity,
+                //   max: (isGlobalClampEnabled && clampConfig["perceived_pitch_librosa_periodicity"]) ? robustStats["perceived_pitch_librosa_periodicity"].max : maxPerceivedPitchLibrosaPeriodicity,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // perceived_pitch_crepe_periodicity: {
+                //   val: () => perceivedPitchCrepePeriodicity(feature.yin_periodicity, feature.crepe_f0, feature.spectral_centroid),
+                //   min: (isGlobalClampEnabled && clampConfig["perceived_pitch_crepe_periodicity"]) ? robustStats["perceived_pitch_crepe_periodicity"].min : minPerceivedPitchCrepePeriodicity,
+                //   max: (isGlobalClampEnabled && clampConfig["perceived_pitch_crepe_periodicity"]) ? robustStats["perceived_pitch_crepe_periodicity"].max : maxPerceivedPitchCrepePeriodicity,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // perceived_pitch_f0_or_SC: {
+                //   val: () => perceivedPitchF0OrSC(feature.yin_periodicity, feature.crepe_f0, feature.spectral_centroid),
+                //   min: (isGlobalClampEnabled && clampConfig["perceived_pitch_f0_or_SC"]) ? robustStats["perceived_pitch_f0_or_SC"].min : minPerceivedPitchF0OrSC,
+                //   max: (isGlobalClampEnabled && clampConfig["perceived_pitch_f0_or_SC"]) ? robustStats["perceived_pitch_f0_or_SC"].max : maxPerceivedPitchF0OrSC,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // perceived_pitch_f0_candidates_periodicity: {
+                //   val: () => perceivedPitchF0Candidates(feature.yin_periodicity, feature.f0_candidates, feature.spectral_centroid),
+                //   min: (isGlobalClampEnabled && clampConfig["perceived_pitch_f0_candidates_periodicity"]) ? robustStats["perceived_pitch_f0_candidates_periodicity"].min : minPerceivedPitchF0Candidates,
+                //   max: (isGlobalClampEnabled && clampConfig["perceived_pitch_f0_candidates_periodicity"]) ? robustStats["perceived_pitch_f0_candidates_periodicity"].max : maxPerceivedPitchF0Candidates,
+                //   softclipping: isSoftclipEnabled
+                // },
+                // loudness_zcr: {
+                //   val: () => feature.loudness * feature.zerocrossingrate,
+                //   min: (isGlobalClampEnabled && clampConfig["loudness_zcr"]) ? robustStats["loudness_zcr"].min : 0,
+                //   max: (isGlobalClampEnabled && clampConfig["loudness_zcr"]) ? robustStats["loudness_zcr"].max : maxLoudness * maxZerocrossingrate,
+                //   softclipping: isSoftclipEnabled
+                // },
+            //   };
             
-            return adjustedZCR;
-        }
-
-
-        let colorValue = 0;
-        let hueColorSaturation = 0;
-        let hueLightness = 0;
-        switch (selectedFeature3) {
-            case "amplitude":
-                hueColorSaturation = map(feature.amplitude, minAmplitude, maxAmplitude, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "zerocrossingrate":
-                hueColorSaturation = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "calibrated-zerocrossingrate":
-                hueColorSaturation = map(calibrateZCR(feature.zerocrossingrate, feature.spectral_centroid, 44100), minZerocrossingrate, maxZerocrossingrate, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "spectral_centroid":
-                hueColorSaturation = map(feature.spectral_centroid, minSpectralCentroid, maxSpectralCentroid, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "spectral_flux":
-                hueColorSaturation = map(feature.spectral_flux, minSpectralFlux, maxSpectralFlux, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "spectral_bandwidth":
-                hueColorSaturation = map(feature.spectral_bandwidth, minSpectralBandwidth, maxSpectralBandwidth, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "spectral_flatness":
-                hueColorSaturation = map(feature.spectral_flatness, minSpectralFlatness, maxSpectralFlatness, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "yin_f0_librosa":
-                hueColorSaturation = map(feature.yin_f0_librosa, minYinF0Librosa, maxYinF0Librosa, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "yin_f0_aubio":
-                hueColorSaturation = map(feature.yin_f0_aubio, minYinF0Aubio, maxYinF0Aubio, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "f0_crepe":
-                hueColorSaturation = map(feature.crepe_f0, minF0Crepe, maxF0Crepe, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "f0_crepe_condidence":
-                hueColorSaturation = map(feature.crepe_confidence, minF0CrepeConfidence, maxF0CrepeConfidence, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "yin_periodicity":
-                hueColorSaturation = map(adjustForSaturationPeriodicity(feature.yin_periodicity), minPeriodicity, maxPeriodicity, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "spectral_deviation":
-                hueColorSaturation = map(feature.standard_deviation, minStandardDeviation, maxStandardDeviation, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "brightness":
-                hueColorSaturation = map(feature.brightness, minBrightness, maxBrightness, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "sharpness":
-                hueColorSaturation = map(feature.sharpness, minSharpness, maxSharpness, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "loudness":
-                hueColorSaturation = map(feature.loudness, minLoudness, maxLoudness, startRange_lineColorSaturation, endRange_lineColorSaturation);
-                break;
-            case "none":
-                hueColorSaturation = 0;
-                break;
-            default:
-                hueColorSaturation = map(feature.loudness, minLoudness, maxLoudness, startRange_lineColorSaturation, endRange_lineColorSaturation);
-        }
-        console.log("hueColorSaturation BEFORE", hueColorSaturation);
-        hueColorSaturation = Math.floor(hueColorSaturation);
-        console.log("hueColorSaturation AFTER", hueColorSaturation);
-        const slider6 = document.getElementById("slider-6"); // Get the slider element
-        const invertMappingCheckbox_lineColorLightness = document.getElementById("invertMapping-6");
-        const isInverted_lineColorLightness = invertMappingCheckbox_lineColorLightness && invertMappingCheckbox_lineColorLightness.checked;
-
-        // Get the dynamic range
-        const { startRange_lineColorLightness, endRange_lineColorLightness } = calculateDynamicRange(slider6, isInverted_lineColorLightness, "startRange_lineColorLightness", "endRange_lineColorLightness");
-
-        // Check if inversion is required for the selected feature
-        // const invertMappingCheckbox_lineColorLightness = document.getElementById("invertMapping-6"); // Update ID as needed
-        // const isInverted_lineColorLightness = invertMappingCheckbox_lineColorLightness && invertMappingCheckbox_lineColorLightness.checked;
-
-        // Determine the range based on inversion state
-        // let startRange_lineColorLightness = isInverted_lineColorLightness ? 0 : 100; // Swap the start range if inverted
-        // let endRange_lineColorLightness = isInverted_lineColorLightness ? 100 : 0; // Swap the end range if inverted
-        // Calculate color based on selected feature3
-       
-        switch (selectedFeature6) {
-            case "amplitude":
-                hueLightness = map(feature.amplitude, minAmplitude, maxAmplitude, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "zerocrossingrate":
-                hueLightness = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "spectral_centroid":
-                hueLightness = map(feature.spectral_centroid, minSpectralCentroid, maxSpectralCentroid, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "spectral_flux":
-                hueLightness = map(feature.spectral_flux, minSpectralFlux, maxSpectralFlux, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "spectral_bandwidth":
-                hueLightness = map(feature.spectral_bandwidth, minSpectralBandwidth, maxSpectralBandwidth, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "spectral_flatness":
-                hueLightness = map(feature.spectral_flatness, minSpectralFlatness, maxSpectralFlatness, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "yin_f0_librosa":
-                hueLightness = map(feature.yin_f0_librosa, minYinF0Librosa, maxYinF0Librosa, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "yin_f0_aubio":
-                hueLightness = map(feature.yin_f0_aubio, minYinF0Aubio, maxYinF0Aubio, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "f0_crepe":
-                hueLightness = map(feature.crepe_f0, minF0Crepe, maxF0Crepe, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "f0_crepe_condidence":
-                hueLightness = map(feature.crepe_confidence, minF0CrepeConfidence, maxF0CrepeConfidence, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "yin_periodicity":
-                hueLightness = map(feature.yin_periodicity, minPeriodicity, maxPeriodicity, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "spectral_deviation":
-                hueLightness = map(feature.standard_deviation, minStandardDeviation, maxStandardDeviation, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "brightness":
-                hueLightness = map(feature.brightness, minBrightness, maxBrightness, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "sharpness":
-                hueLightness = map(feature.sharpness, minSharpness, maxSharpness, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "loudness":
-                hueLightness = map(feature.loudness, minLoudness, maxLoudness, startRange_lineColorLightness, endRange_lineColorLightness);
-                break;
-            case "none":
-                hueLightness = 50;
-                break;
-            default:
-                hueLightness = map(feature.loudness, minLoudness, maxLoudness, startRange_lineColorLightness, endRange_lineColorLightness);
-        }
-        // console.log("y_axis:", y_axis)
-        hueLightness = Math.floor(hueLightness);
-        
-        let hslColor = hexToHSL(huePicker.value); // Convert hex to HSL
-
-        const slider4 = document.getElementById("slider-4"); // Get the slider element
-        const invertMappingCheckbox_lineAngle = document.getElementById("invertMapping-4");
-        const isInverted_lineAngle = invertMappingCheckbox_lineAngle && invertMappingCheckbox_lineAngle.checked;
-        console.log("isInverted_lineAngle:", isInverted_lineAngle);
-        
-        // Get the dynamic range
-        const { startRange_lineAngle, endRange_lineAngle } = calculateDynamicRange(slider4, isInverted_lineAngle, "startRange_lineAngle", "endRange_lineAngle");
-        console.log("startRange_lineAngle", startRange_lineAngle, "endRange_lineAngle", endRange_lineAngle);
-        // Check if inversion is required for the selected feature
-        // const invertMappingCheckbox_lineAngle = document.getElementById("invertMapping-4"); // Update ID as needed
-        // const isInverted_lineAngle = invertMappingCheckbox_lineAngle && invertMappingCheckbox_lineAngle.checked;
-
-        // Determine the range based on inversion state
-        // let startRange_lineAngle = isInverted_lineAngle ? 0 : 100; // Swap the start range if inverted
-        // let endRange_lineAngle = isInverted_lineAngle ? 100 : 0; // Swap the end range if inverted
-        
-        // Calculate angle based on selected feature4
-        let angleRange = 0;
-        let maxAngleRange = 90;
-        switch (selectedFeature4) {
-            case "amplitude":
-                angleRange = map(feature.amplitude, minAmplitude, maxAmplitude,  startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "zerocrossingrate":
-                angleRange = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "spectral_centroid":
-                angleRange = map(feature.spectral_centroid, minSpectralCentroid, maxSpectralCentroid, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "spectral_flux":
-                angleRange = map(feature.spectral_flux, minSpectralFlux, maxSpectralFlux, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "spectral_bandwidth":
-                angleRange = map(feature.spectral_bandwidth, minSpectralBandwidth, maxSpectralBandwidth, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "spectral_flatness":
-                angleRange = map(feature.spectral_flatness, minSpectralFlatness, maxSpectralFlatness, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "yin_f0_librosa":
-                angleRange = map(feature.yin_f0_librosa, minYinF0Librosa, maxYinF0Librosa, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "yin_f0_aubio":
-                angleRange = map(feature.yin_f0_aubio, minYinF0Aubio, maxYinF0Aubio, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "f0_crepe":
-                angleRange = map(feature.crepe_f0, minF0Crepe, maxF0Crepe, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "f0_crepe_condidence":
-                angleRange = map(feature.crepe_confidence, minF0CrepeConfidence, maxF0CrepeConfidence, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "yin_periodicity":
-                angleRange = map(feature.yin_periodicity, minPeriodicity, maxPeriodicity, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "spectral_deviation":
-                angleRange = map(feature.standard_deviation, minStandardDeviation, maxStandardDeviation, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "brightness":
-                angleRange = map(feature.brightness, minBrightness, maxBrightness, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "sharpness":
-                angleRange = map(feature.sharpness, minSharpness, maxSharpness, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "loudness":
-                angleRange = map(feature.loudness, minLoudness, maxLoudness, startRange_lineAngle, endRange_lineAngle);
-                break;
-            case "none":
-                angleRange = 0
-                break;
-            default:
-                // let angleDifference = (feature.zerocrossingrate - audioData.json_data.Song.general_info.median_zcr)/audioData.json_data.Song.general_info.iqr_zcr;
-
-                angle = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_lineAngle, maxAngleRange);
-        }
-
-        const slider7 = document.getElementById("slider-7"); // Get the slider element
-        const invertMappingCheckbox_dashArray = document.getElementById("invertMapping-7");
-        const isInverted_dashArray = invertMappingCheckbox_dashArray && invertMappingCheckbox_dashArray.checked;
-
-        // Get the dynamic range
-        const { startRange_dashArray, endRange_dashArray } = calculateDynamicRange(slider7, isInverted_dashArray, "startRange_dashArray", "endRange_dashArray");
-
-        // Check if inversion is required for the selected feature
-        // const invertMappingCheckbox_dashArray = document.getElementById("invertMapping-7"); // Update ID as needed
-        // const isInverted_dashArray = invertMappingCheckbox_dashArray && invertMappingCheckbox_dashArray.checked;
-
-        // Determine the range based on inversion state
-        // let startRange_dashArray = isInverted_dashArray ? 0 : 10; // Swap the start range if inverted
-        // let endRange_dashArray = isInverted_dashArray ? 10 : 0; // Swap the end range if inverted
-
-        // Calculate angle based on selected feature4
-        let dashArray = 0;
-        switch (selectedFeature7) {
-            case "amplitude":
-                dashArray = map(feature.amplitude, minAmplitude, maxAmplitude, startRange_dashArray, endRange_dashArray);
-                break;
-            case "zerocrossingrate":
-                dashArray = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "spectral_centroid":
-                dashArray = map(feature.spectral_centroid, minSpectralCentroid, maxSpectralCentroid, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "spectral_flux":
-                dashArray = map(feature.spectral_flux, minSpectralFlux, maxSpectralFlux, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "spectral_bandwidth":
-                dashArray = map(feature.spectral_bandwidth, minSpectralBandwidth, maxSpectralBandwidth, startRange_dashArray, endRange_dashArray);
-                break;
-            case "spectral_flatness":
-                dashArray = map(feature.spectral_flatness, minSpectralFlatness, maxSpectralFlatness, startRange_dashArray, endRange_dashArray);
-                break;
-            case "yin_f0_librosa":
-                dashArray = map(feature.yin_f0_librosa, minYinF0Librosa, maxYinF0Librosa, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "yin_f0_aubio":
-                dashArray = map(feature.yin_f0_aubio, minYinF0Aubio, maxYinF0Aubio, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "f0_crepe":
-                dashArray = map(feature.crepe_f0, minF0Crepe, maxF0Crepe, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "f0_crepe_condidence":
-                dashArray = map(feature.crepe_confidence, minF0CrepeConfidence, maxF0CrepeConfidence, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "yin_periodicity":
-                dashArray = map(feature.yin_periodicity, minPeriodicity, maxPeriodicity, startRange_dashArray, endRange_dashArray);
-                break;
-            case "spectral_deviation":
-                dashArray = map(feature.standard_deviation, minStandardDeviation, maxStandardDeviation, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "brightness":
-                dashArray = map(feature.brightness, minBrightness, maxBrightness, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "sharpness":
-                dashArray = map(feature.sharpness, minSharpness, maxSharpness, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "loudness":
-                dashArray = map(feature.loudness, minLoudness, maxLoudness, startRange_dashArray,  endRange_dashArray);
-                break;
-            case "loudness-zcr":
-                //const BaseLength_dashArray = 0;
-                const MaxZCR_dashArray = maxZerocrossingrate; // Replace with the actual maximum ZCR
-                //const MaxEffect_dashAray = 10;
-                // Calculate the contribution of loudness and ZCR
-                let ZCRLoudnessEffect_dashArray = map(feature.loudness, minLoudness, maxLoudness, startRange_dashArray, endRange_dashArray);
-                let ZCRInfluence_dashArray = feature.zerocrossingrate / MaxZCR_dashArray;
-
-                // Combine loudness and ZCR to calculate the line length
-                dashArray = startRange_dashArray + (ZCRLoudnessEffect_dashArray * ZCRInfluence_dashArray);
-                break;
-            case "none":
-                dashArray = 0
-                break;
-            default:
-                // let angleDifference = (feature.zerocrossingrate - audioData.json_data.Song.general_info.median_zcr)/audioData.json_data.Song.general_info.iqr_zcr;
-
-                dashArray = map(feature.zerocrossingrate, minZerocrossingrate, maxZerocrossingrate, startRange_dashArray,  endRange_dashArray);
-        }
-        // angle = angle * getRandomSign() + 80;
-        // Generate a random angle within the calculated range, centered around 90 degrees (vertical)
-        let angle = 90 + getRandomSign() * map(Math.random(), 0, 1, 0, angleRange);
-        // Convert the angle to radians for trigonometric calculations
-        let angleInRadians = (angle * Math.PI) / 180;
-        // angle = angle * getRandomSign()
-
-        // Skip line drawing if loudness is below the threshold
-        loudnessThreshold = 1
-        if (Math.abs(feature.loudness) > loudnessThreshold) {
-            
-
-            // Calculate end points of the line
-            // let x1 = x - lineLength / 2 * Math.cos(angle);
-            // let y1 = y_axis - lineLength / 2 * Math.sin(angle);
-            // let x2 = x + lineLength / 2 * Math.cos(angle);
-            // let y2 = y_axis + lineLength / 2 * Math.sin(angle);
-
-
-            // Calculate end points of the line
-            let x1 = x - (lineLength / 2) * Math.cos(angleInRadians);
-            let y1 = y_axis - (lineLength / 2) * Math.sin(angleInRadians);
-            let x2 = x + (lineLength / 2) * Math.cos(angleInRadians);
-            let y2 = y_axis + (lineLength / 2) * Math.sin(angleInRadians);      
-
-            
-            // Calculate control points for the Bezier curve
-            // let ctrlX1 = x - lineLength * Math.cos(angle) / 4; // Control point 1 x-coordinate
-            // let ctrlY1 = y_axis - lineLength * Math.sin(angle) / 2; // Control point 1 y-coordinate
-            // let ctrlX2 = x + lineLength * Math.cos(angle) / 4; // Control point 2 x-coordinate
-            // let ctrlY2 = y_axis + lineLength * Math.sin(angle) / 2; // Control point 2 y-coordinate
-            
-
-            // if (isJoinPathsEnabled) {
-            
-            // Number of dots to scatter for each data point
-            // Number of dots to scatter for each data point
-            const numDots = 10;
-            // Adjust scatter range based on loudness
-            let scatterRange = map(feature.loudness, minLoudness, maxLoudness, 0, 200); // Scale range based on loudness
-            let currentDots = []; // To store the scattered dots of the current data point
-
-            // Scatter multiple dots along the y-axis
-            // Scatter multiple dots along the y-axis
-            for (let j = 0; j < numDots; j++) {
-                // Scatter dots within the specified range around the main y-axis value
-                let offsetY = (j - (numDots - 1) / 2) * (scatterRange / (numDots - 1)); // Even spacing
-                let scatteredY = y_axis + offsetY;
-
-                // Create a scattered dot
-                let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", x);
-                circle.setAttribute("cy", scatteredY);
-                circle.setAttribute("r", 3); // Radius of each dot
-                circle.setAttribute("fill", "none"); // Gradient color
-                svgContainer.appendChild(circle);
-
-                // Store the current dot's position
-                currentDots.push({ x, y: scatteredY });
-            }
-
-            // Store the dot position for polyline
-            pointsArray.push(`${x},${y_axis}`);
+            // Y AXIS
+            // const slider5 = document.getElementById("slider-5");
+            // const isInverted_y_axis = document.getElementById("invertMapping-5")?.checked;
+            // const {startRange_y_axis,endRange_y_axi} = calculateDynamicRange(slider5,isInverted_y_axis,"startRange_y_axis","endRange_y_axis");
+            // const scaleInfo = getYAxisScaleFromConfig(featureConfig,selectedFeature5,isLogSelected);
+            // let minValue,maxValue;
+            // if(scaleInfo)
+            // {
+            //     const {min,max,labelFormatter} = scaleInfo;
+            //     minValue = min;
+            //     maxValue = max;
+            //     drawYAxisScale(canvasHeight,minValue,maxValue,isLogSelected,padding,labelFormatter,isInverted_y_axis);
+            // }
+            // else
+            // {
+            //     console.warn(`Feature ${selectedFeature5} not found in config`);
+            // }
+            let yAxis = computeYAxisValue(feature,selectedFeature5,featureConfig,canvasHeight,padding,isInverted_y_axis,scale,minValue,maxValue,isSoftclipEnabled,softclipScale);
+            // if(yAxis === null)
+            // {
+            //     yAxis = getMappedYAxisFallback(selectedFeature5,featureConfig,canvasHeight,padding,isInverted_y_axis,isLogSelected,minValue,maxValue,400,"spectral_centroid");
             // }
             
+            // LINE LENGTH
+            // const slider1 = document.getElementById("slider-1");
+            // const isInverted_lineLength = document.getElementById("invertMapping-1")?.checked;
+            // const {startRange_lineLength,endRange_lineLength} = calculateDynamicRange(slider1,isInverted_lineLength,"startRange_lineLength","endRange_lineLength");
+            const lineLength = getMappedFeatureValue(feature,selectedFeature1,featureConfig,startRange_lineLength,endRange_lineLength,isSoftclipEnabled,softclipScale,1);
 
-
-
-
-
-
-
-            if (isThresholdEnabled && feature.zerocrossingrate > zeroCrossingThreshold) {
-                // Draw multiple lines at different y heights (spectral centroids)
-                for (let j = 0; j < 100; j++) { // Draw 5 lines at different y heights
-                    // Calculate y position based on feature values
-                    let y_axis = map((feature.spectral_centroid + 500)*j*0.01, 0, 5000, 800, 0);
-                    // Calculate end points of the line
-                    let x1 = x - lineLength / 2 * Math.cos(angle);
-                    let y1 = y_axis - lineLength / 2 * Math.sin(angle*Math.random());
-                    let x2 = x + lineLength / 2 * Math.cos(angle);
-                    let y2 = y_axis + lineLength / 2 * Math.sin(angle*Math.random());
-
-                    // Calculate control points for the Bezier curve
-                    let ctrlX1 = x - lineLength * Math.cos(angle) / 4; // Control point 1 x-coordinate
-                    let ctrlY1 = y_axis - lineLength * Math.sin(angle) / 2; // Control point 1 y-coordinate
-                    let ctrlX2 = x + lineLength * Math.cos(angle) / 4; // Control point 2 x-coordinate
-                    let ctrlY2 = y_axis + lineLength * Math.sin(angle) / 2; // Control point 2 y-coordinate
-
-
-                    // Create a path element for the Bezier curve
-                    let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    path.setAttribute("d", `M${x1},${y1} C${ctrlX1},${ctrlY1} ${ctrlX2},${ctrlY2} ${x2},${y2}`);
-                    path.setAttribute("stroke", `rgb(${colorValue},${colorValue},${colorValue})`);
-                    path.setAttribute("stroke-width", lineWidth);
-                    path.setAttribute("fill", "none");
-                    // Generate a random number between 1 and 3
-                    // let randomClassNumber = Math.floor(Math.random() * 3) + 1;
-
-                    // Add CSS class for animation with the random number appended
-                    // path.classList.add(`path-animation-${randomClassNumber}`);
-                    svgContainer.appendChild(path);
-                }
-            } else {
-                
-                
-
-                if (isThresholdCircleEnabled) {
-
-                    // Calculate properties for circle
-                    let radius = map(feature.amplitude, 0, maxAmplitude, 2, 10);
-                    colorValue = map(feature.spectral_centroid, 0, maxSpectralCentroid, 100, 0);
-
-                    let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                    circle.setAttribute("cx", x);
-                    circle.setAttribute("cy", y_axis);
-                    circle.setAttribute("r", radius);
-                    circle.setAttribute("fill", `rgb(0,0,${colorValue})`);
-
-                    svgContainer.appendChild(circle);
-
-                    const TWO_PI = 2 * Math.PI;
-                    // Spiral pattern
-                    for (let t = 0; t < TWO_PI; t += 0.1) {
-                        let radius = map(feature.spectral_centroid, 0, maxSpectralCentroid, 2, 10);
-                        let x_spiral = x + radius * Math.cos(t) * (1 + feature.amplitude);
-                        let y_spiral = y_axis + radius * Math.sin(t) * (1 + feature.amplitude);
-
-                        let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                        circle.setAttribute("cx", x_spiral);
-                        circle.setAttribute("cy", y_spiral);
-                        circle.setAttribute("r", 2);
-                        circle.setAttribute("fill", `rgb(${colorValue}, ${200 - colorValue}, 255)`);
-
-                        svgContainer.appendChild(circle);
-                    }
-                }
-                    
-            let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-
-            // console.log("x1:",x1, "y1:",y1,"ctrlX1:", ctrlX1, "ctrlX2:", ctrlX2, "ctrlY2:", ctrlY2, "x2:", x2, "y2:", y2)
-            // path.setAttribute("d", `M${x1},${y1} C${ctrlX1},${ctrlY1} ${ctrlX2},${ctrlY2} ${x2},${y2}`);
-            // Set the path data for a straight line
-            path.setAttribute("d", `M${x1},${y1} L${x2},${y2}`);    
-            //path.setAttribute("stroke", "black"); // Set the brush color
-            //path.setAttribute("stroke-width", "5"); // Set the brush thickness
-            path.setAttribute("stroke-linecap", "round"); // Make the line ends rounded
-            path.setAttribute("stroke-linejoin", "round"); // Make the line joins rounded
-            // Example: Add features as a string (you can format it nicely)
-            // Generate the data-features attribute dynamically based on the selected feature
-            // Generate the data-features attribute dynamically based on the selected feature
-            let featureDescription = `Timestamp: ${feature.timestamp.toFixed(2)}s<br>`;
-            featureDescription += `Amplitude: ${feature.amplitude.toFixed(2)}<br>`;
-            featureDescription += `Centroid: ${feature.spectral_centroid.toFixed(2)}<br>`;
-            featureDescription += `Flux: ${feature.spectral_flux.toFixed(2)}<br>`;
-            featureDescription += `Flatness: ${feature.spectral_flatness.toFixed(2)}<br>`;
-            featureDescription += `Bandwidth: ${feature.spectral_bandwidth.toFixed(2)}<br>`;
-            featureDescription += `ZCR: ${feature.zerocrossingrate.toFixed(2)}<br>`;
-            featureDescription += `Confidence: ${feature.crepe_confidence.toFixed(2)}<br>`;
-            featureDescription += `Combo Crepe | Crepe Conf: ${(
-                feature.crepe_f0 * feature.crepe_confidence +
-                (feature.spectral_centroid * (1 - feature.crepe_confidence))*0.2
-            ).toFixed(2)}<br>`;
-            featureDescription += `Crepe F0: ${feature.crepe_f0.toFixed(2)}<br>`;
-
-            featureDescription += `Periodicity: ${feature.yin_periodicity.toFixed(2)}<br>`;
-            featureDescription += `Brightness: ${feature.brightness.toFixed(2)}<br>`;
-            featureDescription += `Sharpness: ${feature.sharpness.toFixed(2)}<br>`;
-            featureDescription += `Loudness: ${feature.loudness.toFixed(2)}`;
+            // if (selectedFeature1 === "none")
+            // {
+            //     lineLength = 1;
+            // }
+            // else if (selectedFeature1 === "loudness-zcr") {
+            // const loud = map(feature.loudness, 0, maxLoudness, 0, endRange_lineLength);
+            // const zcrRatio = feature.zerocrossingrate / maxZerocrossingrate;
+            // lineLength = startRange_lineLength + loud * zcrRatio;
             
-
-            // Attach the data-features attribute to the path
-            path.setAttribute("data-features", featureDescription);
-            // Clamp dashArray to avoid negative values
-            // dashArray = Math.max(dashArray, 0);
-
-            // Apply the stroke-dasharray
-            if (dashArray == 0) {
-                path.removeAttribute("stroke-dasharray"); // Solid line
-            } else {
-                path.setAttribute("stroke-dasharray", "4,"+dashArray.toString()); // Dashed line with spacing
-            }
-            // path.setAttribute("stroke", `rgb(${colorValue},${colorValue},${colorValue})`);
-            // Set the stroke color using HSL
-            path.setAttribute("stroke", `hsl(${hslColor}, ${hueColorSaturation}%, ${hueLightness}%)`); // 100% saturation, 50% lightness
-            path.setAttribute("stroke-width", lineWidth);
-            path.setAttribute("fill", "none");
-            path.classList.add(`audio-path-${fileIndex}`); // Add unique class
-
-
-            if (isJoinPathsEnabled) {
-                // Connect the dots with lines to the previous data point
-                if (previousDots.length > 0) {
-                    for (let j = 0; j < numDots; j++) {
-                        let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                        line.setAttribute("x1", previousDots[j].x);
-                        line.setAttribute("y1", previousDots[j].y);
-                        line.setAttribute("x2", currentDots[j].x);
-                        line.setAttribute("y2", currentDots[j].y);
-                        line.setAttribute("stroke", `rgb(${j * (255 / numDots)}, 100, 200)`); // Line color
-                        line.setAttribute("stroke-width", 1);
-                        svgContainer.appendChild(line);
-                    }
-                }
-
-                // Update previousDots to currentDots for the next iteration
-                previousDots = currentDots;
-            }
+            // } else if (selectedFeature1 === "loudness-periodicity") {
+            // const loud = map(feature.loudness, minLoudness, maxLoudness, 0, endRange_lineLength);
+            // const periodicityInverted = 1 - (feature.yin_periodicity / maxPeriodicity);
+            // lineLength = startRange_lineLength + loud * periodicityInverted;
             
-            // Generate a random number between 1 and 3
-            // let randomClassNumber = Math.floor(Math.random() * 3) + 1;
+            // } else if (selectedFeature1 === "loudness-pitchConf") {
+            // const loud = map(feature.loudness, minLoudness, maxLoudness, 0, endRange_lineLength);
+            // const pitchConfInverted = 1 - (feature.crepe_confidence / maxF0CrepeConfidence);
+            // lineLength = startRange_lineLength + loud * pitchConfInverted;
+            // }
+            // else if (featureConfig[selectedFeature1])
+            // {
+            //     const { val, min, max, softclipping } = featureConfig[selectedFeature1];
 
-            // Add CSS class for animation with the random number appended
-            // path.classList.add(`path-animation-${randomClassNumber}`);
-            // Store the attributes in an object
-            timestampForGranulator = feature.timestamp
-            pathData.push({
-                timestampForGranulator,
-                y_axis,
+            //     const clamped = isGlobalClampEnabled
+            //       ? Math.max(min, Math.min(val(), max))
+            //       : val();
+            
+            //     lineLength = softclipping
+            //       ? mapWithSoftClipping(clamped, min, max, startRange_lineLength, endRange_lineLength, softclipScale)
+            //       : map(clamped, min, max, startRange_lineLength, endRange_lineLength);
+            
+            // }
+            // else
+            // {
+            //     // fallback
+            //     lineLength = map(feature.amplitude, 0, maxAmplitude, startRange_lineLength, endRange_lineLength);
+            // }
+
+            // LINE WIDTH
+            // const slider2 = document.getElementById("slider-2");
+            // const isInverted_lineWidth = document.getElementById("invertMapping-2")?.checked;
+            // const {startRange_lineWidth,endRange_lineWidth } = calculateDynamicRange(slider2,isInverted_lineWidth,"startRange_lineWidth","endRange_lineWidth");
+            const lineWidth = getMappedFeatureValue(feature,selectedFeature2,featureConfig,startRange_lineWidth,endRange_lineWidth,isSoftclipEnabled,softclipScale,1);
+
+            // COLOR SATURATION
+            // const slider3 = document.getElementById("slider-3");
+            // const isInverted_colorSaturation = document.getElementById("invertMapping-3")?.checked;
+            // const {startRange_colorSaturation,endRange_colorSaturation} = calculateDynamicRange(slider3,isInverted_colorSaturation,"startRange_colorSaturation","endRange_colorSaturation");
+            let colorSaturation = getMappedFeatureValue(feature,selectedFeature3,featureConfig,startRange_colorSaturation,endRange_colorSaturation,isSoftclipEnabled,softclipScale,0);
+            colorSaturation = Math.floor(colorSaturation);
+
+            // COLOR LIGHTNESS
+            // const slider6 = document.getElementById("slider-6");
+            // const isInverted_colorLightness = document.getElementById("invertMapping-6")?.checked;
+            // const {startRange_colorLightness,endRange_colorLightness} = calculateDynamicRange(slider6,isInverted_colorLightness,"startRange_colorLightness","endRange_colorLightness");
+            let colorLightness = getMappedFeatureValue(feature,selectedFeature6,featureConfig,startRange_colorLightness,endRange_colorLightness,isSoftclipEnabled,softclipScale,50);
+            colorLightness = Math.floor(colorLightness);
+            
+            // ANGLE
+            // const slider4 = document.getElementById("slider-4");
+            // const isInverted_angle = document.getElementById("invertMapping-4")?.checked;
+            // const {startRange_angle,endRange_angle} = calculateDynamicRange(slider4,isInverted_angle,"startRange_angle","endRange_angle");
+            let angleRange = getMappedFeatureValue(feature,selectedFeature4,featureConfig,startRange_angle,endRange_angle,isSoftclipEnabled,softclipScale,0);
+            const angleLowerBound = (isInverted_angle ? endRange_angle : startRange_angle)
+            if(angleRange >= angleLowerBound)
+            {
+                angleRange = map(rng(),0,1,angleLowerBound,angleRange);
+            }
+            let angleDegrees = 90 + getRandomSign()*angleRange;
+            angle = (angleDegrees*Math.PI)/180;
+
+            // DASH ARRAY
+            // const slider7 = document.getElementById("slider-7");
+            // const isInverted_dashArray = document.getElementById("invertMapping-7")?.checked;
+            // const {startRange_dashArray,endRange_dashArray} = calculateDynamicRange(slider7,isInverted_dashArray,"startRange_dashArray","endRange_dashArray");
+            let dashArray = getMappedFeatureValue(feature,selectedFeature7,featureConfig,startRange_dashArray,endRange_dashArray,isSoftclipEnabled,softclipScale,0);
+            // const dashLowerBound = (isInverted_dashArray ? endRange_dashArray : startRange_dashArray)
+            // if(dashArray >= dashLowerBound)
+            // {
+            //     dashArray = map(rng(),0,1,dashLowerBound,dashArray);
+            // }
+
+            // // Special handling for composite case
+            // if (selectedFeature7 === "loudness-zcr")
+            // {
+            //     const MaxZCR = maxZerocrossingrate;
+
+            //     const ZCRLoudnessEffect = map(
+            //         feature.loudness,
+            //         minLoudness,
+            //         maxLoudness,
+            //         startRange_dashArray,
+            //         endRange_dashArray
+            //     );
+
+            //     const ZCRInfluence = feature.zerocrossingrate / MaxZCR;
+
+            //     dashArray = startRange_dashArray + (ZCRLoudnessEffect * ZCRInfluence);
+            // }
+            // else
+            // {
+            //     dashArray = getMappedFeatureValue(
+            //     selectedFeature7,
+            //     featureConfig,
+            //     startRange_dashArray,
+            //     endRange_dashArray,
+            //     0, // default
+            //     "zerocrossingrate" // fallback
+            //     );
+            // }
+
+            const max_loudness = featureConfig["loudness"].max;
+            const normalized_loudness = clamp(feature["loudness"],0,max_loudness)/max_loudness;
+            feature["normalized_loudness"] = normalized_loudness;
+
+            // Objectifier Data
+            feature["visual"] = {
+                xAxis,
+                yAxis,
                 lineLength,
                 lineWidth,
-                hueColorSaturation,
-                hueLightness,
+                colorSaturation,
+                colorLightness,
+                angle,
                 dashArray,
-            });
-            if (isPolygonEnabled) {
-                    // Map features to polygon properties
-                    const numSides = Math.floor(lineLength); // Map to number of sides
-                    // console.log(numSides)
-                    const radius = lineWidth;
-                    const fillColor = "red"
+            };
 
-                    // Generate the SVG path data for the polygon
-                    const polygonPath = polygon(x, y_axis, numSides, radius);
+            if(!isObjectifyEnabled)
+            {
+                const loudness_threshold = document.getElementById("slider-gate").noUiSlider.get()/100;
+                if (normalized_loudness > loudness_threshold)
+                {
+                    // Sonificators Data
+                    const timestamp = feature["timestamp"];
+                    pathData[fileIndex].push(
+                    {
+                        timestamp,
+                        yAxis,
+                        lineLength,
+                        lineWidth,
+                        colorHue,
+                        colorSaturation,
+                        colorLightness,
+                        angle,
+                        dashArray,
+                    });
 
-                    // Create the SVG <path> element for the polygon
-                    const polygonElement = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    polygonElement.setAttribute("d", polygonPath);
-                    polygonElement.setAttribute("fill", `hsl(${hslColor}, ${hueColorSaturation}%, ${hueLightness}%)`);
-                    polygonElement.setAttribute("stroke", `hsl(${hslColor}, ${hueColorSaturation}%, ${hueLightness}%)`);
-                    polygonElement.setAttribute("stroke-width", 1);
+                    //! Dynamically creating description
+                    let featureDescription = `Timestamp: ${feature["timestamp"].toFixed(2)}s<br>`;
+                    for(let i = 0; i < rawFeatureNames.length; i++)
+                    {
+                        let entry = featureConfig[rawFeatureNames[i]];
+                        const min_value = entry.min;
+                        const max_value = entry.max;
+                        let value = clamp(entry.val(feature),min_value,max_value)
+                        if(isSoftclipEnabled && clampConfig[rawFeatureNames[i]])
+                        {    
+                            const shift = (entry.median - min_value)/(max_value - min_value);
+                            value = mapWithSoftClipping(value,min_value,max_value,min_value,max_value,shift,softclipScale)
+                        }
+                        featureDescription += `${visibleFeatureNames[i]}: ${value.toFixed(2)}<br>`;
+                    }
+                    
+                    if(isLineSketchingEnabled)
+                    {
+                        // Calculate end points of the line
+                        let x1 = xAxis - (lineLength / 2) * Math.cos(angle);
+                        let y1 = yAxis - (lineLength / 2) * Math.sin(angle);
+                        let x2 = xAxis + (lineLength / 2) * Math.cos(angle);
+                        let y2 = yAxis + (lineLength / 2) * Math.sin(angle);      
+    
+                        // Store the dot position for polyline
+                        // pointsArray.push(`${xAxis},${yAxis}`);
+    
+                        let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    
+                        // if (isThresholdEnabled && feature.zerocrossingrate > zeroCrossingThreshold)
+                        // {
+                        //     // Draw multiple lines at different y heights (spectral centroids)
+                        //     for (let j = 0; j < 100; j++)
+                        //     { // Draw 5 lines at different y heights
+                        //         // Calculate y position based on feature values
+                        //         let yAxis = map((feature.spectral_centroid + 500)*j*0.01, 0, maxSpectralCentroid, canvasHeight, 0);
+                        //         // Calculate end points of the line
+                        //         //! Changed Math.random() to rng()
+                        //         let x1 = xAxis - lineLength / 2 * Math.cos(angle);
+                        //         let y1 = yAxis - lineLength / 2 * Math.sin(angle*rng());
+                        //         let x2 = xAxis + lineLength / 2 * Math.cos(angle);
+                        //         let y2 = yAxis + lineLength / 2 * Math.sin(angle*rng());
+    
+                        //         // Calculate control points for the Bezier curve
+                        //         let ctrlX1 = xAxis - lineLength * Math.cos(angle) / 4; // Control point 1 xAxis-coordinate
+                        //         let ctrlY1 = yAxis - lineLength * Math.sin(angle) / 2; // Control point 1 y-coordinate
+                        //         let ctrlX2 = xAxis + lineLength * Math.cos(angle) / 4; // Control point 2 xAxis-coordinate
+                        //         let ctrlY2 = yAxis + lineLength * Math.sin(angle) / 2; // Control point 2 y-coordinate
+    
+    
+                        //         // Create a path element for the Bezier curve
+                        //         let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        //         path.setAttribute("d", `M${x1},${y1} C${ctrlX1},${ctrlY1} ${ctrlX2},${ctrlY2} ${x2},${y2}`);
+                        //         path.setAttribute("stroke", `rgb(${colorValue},${colorValue},${colorValue})`);
+                        //         path.setAttribute("stroke-width", lineWidth);
+                        //         path.setAttribute("fill", "none");
+                        //         // Generate a random number between 1 and 3
+                        //         // let randomClassNumber = Math.floor(Math.random() * 3) + 1;
+    
+                        //         // Add CSS class for animation with the random number appended
+                        //         // path.classList.add(`path-animation-${randomClassNumber}`);
+                        //         svgContainer.appendChild(path);
+                        //     }
+                        // }
+    
+                        path.setAttribute("d", `M${x1},${y1} L${x2},${y2}`);    
+                        path.setAttribute("stroke-linecap", "round"); // Make the line ends rounded
+                        path.setAttribute("stroke-linejoin", "round"); // Make the line joins rounded
+    
+                        // Clamp dashArray to avoid negative values
+                        // dashArray = Math.max(dashArray, 0);
+    
+                        // Apply the stroke-dasharray
+                        if(dashArray == 0)
+                        {
+                            path.removeAttribute("stroke-dasharray"); // Solid line
+                        }
+                        else
+                        {
+                            const linepx = Math.max(dashArray,0.5);
+                            const spacepx = linepx;
+                            // const spacepx = linepx; 
+                            // path.setAttribute("stroke-dasharray", "4,"+dashArray.toString()); // Dashed line with spacing
+                            path.setAttribute("stroke-dasharray", linepx.toString() + ","+ spacepx.toString()); // Dashed line with spacing
+                        }
+                        // path.setAttribute("stroke", `rgb(${colorValue},${colorValue},${colorValue})`);
+                        // Set the stroke color using HSL
+                        // console.log('colorLightness', colorLightness);
+    
+                        path.setAttribute("stroke", `hsl(${colorHue}, ${colorSaturation}%, ${colorLightness}%)`); // 100% saturation, 50% lightness
+                        path.setAttribute("stroke-width", lineWidth);
+                        path.setAttribute("fill", "none");
+                        path.setAttribute("data-features",featureDescription);
+    
+                        // path.classList.add(`audio-path-${fileIndex}`); // Add unique class
+                        // path.style.display = isHidden ? "none" : "inline";
+                        // svgContainer.appendChild(path);
+                        pathGroup.appendChild(path);
+    
+                        if (isThresholdCircleEnabled)
+                        {
+                            // Calculate properties for circle
+                            // let radius = map(feature.loudness, 0, maxLoudness, 2, 10); //! Changed amplitude with loudness
+                            // colorValue = map(feature.spectral_centroid, 0, maxSpectralCentroid, 100, 0);
+                            //! Maybe do this instead?
+                            let radius = lineWidth/2 + 0;
+                            let hue = hue1
+    
+                            let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                            circle.setAttribute("cx", xAxis);
+                            circle.setAttribute("cy", yAxis);
+                            circle.setAttribute("r", radius);
+                            circle.setAttribute("fill",`hsl(${hue}, ${colorSaturation}%,${colorLightness}%)`);
+                            // circle.setAttribute("fill", `rgb(0,0,${colorValue})`);
+    
+                            //! Added this
+                            circle.setAttribute("data-features",featureDescription);
+                            // circle.classList.add(`audio-path-${fileIndex}`); // Add unique class
+                            // circle.style.display = isHidden ? "none" : "inline";
+                            // svgContainer.appendChild(circle);
+                            pathGroup.appendChild(circle);
+    
+                            //! Replaced spiral with solid circle to reduce overloading
+                            let width = 4
+                            radius = lineLength/2 + lineWidth/2 - width/2;
+                            circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                            circle.setAttribute("cx", xAxis);
+                            circle.setAttribute("cy", yAxis);
+                            circle.setAttribute("r", radius);
+                            circle.setAttribute("stroke",`hsl(${hue}, ${colorSaturation}%,${colorLightness}%)`);
+                            circle.setAttribute("stroke-width",width)
+                            circle.setAttribute("fill","none");
+                            circle.setAttribute("data-features",featureDescription);
+                            pathGroup.appendChild(circle);
+    
+                            // const TWO_PI = 2 * Math.PI;
+                            // // Spiral pattern
+                            // for (let t = 0; t < TWO_PI; t += 0.1)
+                            // {
+                            //     //! Maybe do this instead?
+                            //     let radius = lineLength/2;
+                            //     let x_spiral = xAxis + radius*Math.cos(t);
+                            //     let y_spiral = yAxis + radius*Math.sin(t);
+                            //     // let radius = map(feature.spectral_centroid, 0, maxSpectralCentroid, 2, 10);
+                            //     // let x_spiral = xAxis + radius * Math.cos(t) * (1 + feature.loudness); //! Changed amplitude with loudness
+                            //     // let y_spiral = yAxis + radius * Math.sin(t) * (1 + feature.loudness); //! Changed amplitude with loudness
+    
+                            //     let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                            //     circle.setAttribute("cx",x_spiral);
+                            //     circle.setAttribute("cy",y_spiral);
+                            //     circle.setAttribute("r",2);
+                            //     circle.setAttribute("fill",`hsl(${hue}, ${colorSaturation}%,${colorLightness}%)`);
+                            //     // circle.setAttribute("fill",`rgb(${colorValue}, ${200 - colorValue}, 255)`);
+    
+                            //     circle.setAttribute("data-features",featureDescription);
+                            //     // circle.classList.add(`audio-path-${fileIndex}`); // Add unique class
+                            //     // circle.style.display = isHidden ? "none" : "inline";
+                            //     // svgContainer.appendChild(circle);
+                            //     pathGroup.appendChild(circle);
+                            // }
+                        }
+    
+                        if (isJoinPathsEnabled)
+                        {
+                            const numDots = 10;
+    
+                            // Adjust scatter range based on loudness
+                            // let scatterRange = map(feature.loudness, minLoudness, maxLoudness, 0, 200); // Scale range based on loudness
+                            let scatterRange = lineLength; //! Maybe like this this instead?
+                            
+                            let currentDots = []; // To store the scattered dots of the current data point
+    
+                            // Scatter multiple dots along the y-axis
+                            //! Some changes here
+                            for (let j = 0; j < numDots; j++)
+                            {
+                                let offset = j*scatterRange/(numDots - 1) - scatterRange/2;
+                                let scatteredX = xAxis + offset*Math.cos(angle);
+                                let scatteredY = yAxis + offset*Math.sin(angle);
+    
+                                // Scatter dots within the specified range around the main y-axis value
+                                // let offsetY = (j - (numDots - 1) / 2) * (scatterRange / (numDots - 1)); // Even spacing
+                                // let scatteredY = yAxis + offsetY;
+    
+                                // // Create a scattered dot
+                                // let circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                                // circle.setAttribute("cx", scatteredX);
+                                // circle.setAttribute("cy", scatteredY);
+                                // circle.setAttribute("r", 1); // Radius of each dot
+                                // circle.setAttribute("fill", "none"); // Gradient color
+                                // // svgContainer.appendChild(circle);
+                                // pathGroup.appendChild(circle);
+    
+                                // Store the current dot's position
+                                currentDots.push({xAxis : scatteredX,y : scatteredY});
+                            }
+    
+                            // Connect the dots with lines to the previous data point
+                            if (previousDots.length > 0)
+                            {
+                                //! Interpolating colors along the minor arc of the hue circle
+                                let hue_diff = (hue2 - hue1 + 360) % 360;
+                                if(hue_diff > 180)
+                                {
+                                    hue_diff -= 360
+                                }
+                                for (let j = 0; j < numDots; j++)
+                                {
+                                    let hue = (hue1 + j*hue_diff/(numDots - 1) + 360) % 360
+                                    let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                                    line.setAttribute("x1", previousDots[j].xAxis);
+                                    line.setAttribute("y1", previousDots[j].y);
+                                    line.setAttribute("x2", currentDots[j].xAxis);
+                                    line.setAttribute("y2", currentDots[j].y);
+                                    line.setAttribute("stroke",`hsl(${hue}, 100%,50%)`); // Line color
+                                    // line.setAttribute("stroke", `rgb(${j * (255 / numDots)}, 100, 200)`); // Line color
+                                    line.setAttribute("stroke-width", 1);
+                                    // line.classList.add(`audio-path-${fileIndex}`); // Add unique class
+                                    // line.style.display = isHidden ? "none" : "inline";
+                                    // svgContainer.appendChild(line);
+                                    pathGroup.appendChild(line);
+                                }
+                            }
+                            previousDots = currentDots;
+                        }
+                    }
+                    //! Separated this from isLineSketchingEnabled
+                    else if(isPolygonEnabled)
+                    {
+                        // ✅ Validate and clamp number of sides
+                        const polygonCorners = Math.max(3, Math.floor(lineWidth)); // Minimum triangle
+                        const polygonRadius = lineLength;
+                        const polygonPath = generatePolygonPath(xAxis, yAxis, polygonCorners, polygonRadius);
+                        const strokeWidth = 1;
+                        const opacity = 1;
+                        const skewX = -(angleDegrees - 90);
+                        const texture = dashArray/100;
+    
+                        // 💡 Use HSL for dynamic coloring with added opacity
+                        const fillColor = `hsl(${colorHue}, ${colorSaturation}%, ${colorLightness}%)`;
+                        const strokeColor = `hsl(${colorHue}, ${colorSaturation}%, ${Math.max(colorLightness - 20,0)}%)`;
+                        // const patternColor = `hsl(${colorHue}, ${Math.max(colorSaturation - 20,0)}%, ${Math.max(colorLightness - 20,0)}%)`;
+                        const patternColor = `hsl(${colorHue}, ${Math.max(colorSaturation - 20,0)}%, ${Math.min(colorLightness + 20,100)}%)`;
+    
+                        const {pattern,patternId} = createPattern(texture,xAxis,yAxis,polygonRadius,opacity,fillColor,patternColor);
+                        defs.appendChild(pattern);
+    
+                        const polygonContainer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                        polygonContainer.setAttribute("transform",`translate(${xAxis},${yAxis}) skewX(${skewX}) translate(${-xAxis},${-yAxis})`);
+    
+                        // 🎨 Create the polygon element
+                        const polygonElement = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        polygonElement.setAttribute("d", polygonPath);
+                        polygonElement.setAttribute("fill", `url(#${patternId})`);
+                        // polygonElement.setAttribute("fill", fillColor);
+                        // polygonElement.setAttribute("fill-opacity", opacity);  // ⬅️ subtle transparency
+                        polygonElement.setAttribute("stroke", strokeColor);
+                        polygonElement.setAttribute("stroke-width",strokeWidth);
+                        polygonElement.setAttribute("stroke-opacity", opacity); // ⬅️ optional softer stroke
+                        // polygonElement.setAttribute("stroke-linejoin", "round"); // ⬅️ rounded joins
+    
+                        //! Added this
+                        polygonElement.setAttribute("data-features",featureDescription);
+    
+                        // 🖼️ Append to SVG
+                        polygonContainer.appendChild(polygonElement);
+                        pathGroup.appendChild(polygonContainer);
+                        // svgContainer.appendChild(polygonContainer);
+                    }
+                } 
+            }
+        }
+        if(!isObjectifyEnabled)
+        {
+            svgContainer.appendChild(pathGroup);
+        }
+        else
+        {
+            drawClusterOverlays(audioData.clusters,audioData.features,svgContainer,canvasWidth,canvasHeight,maxDuration,fileIndex);
+        }
+    });
 
-                    // Append the polygon to the SVG container
-                    svgContainer.appendChild(polygonElement);
+    if(isPolygonEnabled)
+    {
+        createPattern.counter = 0;
+    }
 
-                } else {
-                    svgContainer.appendChild(path);
-                }
-            
-            // }       
-        } 
-    } else {
-        console.log("Loudness too low, skipping line drawing.", Math.abs(feature.loudness), "at timestamp:", feature.timestamp);
-    }      
+    //! Draw y axis on top of everything
+    if(yAxisFormatter)
+    {
+        drawYAxisScale(canvasHeight,minValue,maxValue,scale,padding,yAxisFormatter,isInverted_y_axis);
+    }
+
+    prepareSynthData(pathData);
 }
+
+//! -------------------------------------------------------------------
+//! Sonificators stuff (currently being moved to sonificators.js)
+//! -------------------------------------------------------------------
 
 // Step 2: Compute min-max ranges
 function computeMinMaxRanges(data) {
     const minMaxValues = {
-        y_axis: { min: Infinity, max: -Infinity },
+        yAxis: { min: Infinity, max: -Infinity },
         lineLength: { min: Infinity, max: -Infinity },
         lineWidth: { min: Infinity, max: -Infinity },
-        hueColorSaturation: { min: Infinity, max: -Infinity },
-        hueLightness: { min: Infinity, max: -Infinity },
+        colorSaturation: { min: Infinity, max: -Infinity },
+        colorLightness: { min: Infinity, max: -Infinity },
         dashArray: { min: Infinity, max: -Infinity },
     };
 
     data.forEach((item) => {
-        minMaxValues.y_axis.min = Math.min(minMaxValues.y_axis.min, item.y_axis);
-        minMaxValues.y_axis.max = Math.max(minMaxValues.y_axis.max, item.y_axis);
+        minMaxValues.yAxis.min = Math.min(minMaxValues.yAxis.min, item.yAxis);
+        minMaxValues.yAxis.max = Math.max(minMaxValues.yAxis.max, item.yAxis);
         minMaxValues.lineLength.min = Math.min(minMaxValues.lineLength.min, item.lineLength);
         minMaxValues.lineLength.max = Math.max(minMaxValues.lineLength.max, item.lineLength);
         minMaxValues.lineWidth.min = Math.min(minMaxValues.lineWidth.min, item.lineWidth);
         minMaxValues.lineWidth.max = Math.max(minMaxValues.lineWidth.max, item.lineWidth);
-        minMaxValues.hueColorSaturation.min = Math.min(minMaxValues.hueColorSaturation.min, item.hueColorSaturation);
-        minMaxValues.hueColorSaturation.max = Math.max(minMaxValues.hueColorSaturation.max, item.hueColorSaturation);
-        minMaxValues.hueLightness.min = Math.min(minMaxValues.hueLightness.min, item.hueLightness);
-        minMaxValues.hueLightness.max = Math.max(minMaxValues.hueLightness.max, item.hueLightness);
+        minMaxValues.colorSaturation.min = Math.min(minMaxValues.colorSaturation.min, item.colorSaturation);
+        minMaxValues.colorSaturation.max = Math.max(minMaxValues.colorSaturation.max, item.colorSaturation);
+        minMaxValues.colorLightness.min = Math.min(minMaxValues.colorLightness.min, item.colorLightness);
+        minMaxValues.colorLightness.max = Math.max(minMaxValues.colorLightness.max, item.colorLightness);
         minMaxValues.dashArray.min = Math.min(minMaxValues.dashArray.min, item.dashArray);
         minMaxValues.dashArray.max = Math.max(minMaxValues.dashArray.max, item.dashArray);
     });
 
-    // console.log("Computed min-max ranges:", minMaxValues);
     return minMaxValues;
 }
 
@@ -1385,11 +1544,11 @@ function computeMinMaxRanges(data) {
 function normalizePathData(data, minMaxValues) {
     return data.map((item) => ({
         ...item,
-        y_axis: normalize(item.y_axis, minMaxValues.y_axis.min, minMaxValues.y_axis.max),
+        yAxis: normalize(item.yAxis, minMaxValues.yAxis.min, minMaxValues.yAxis.max),
         lineLength: normalize(item.lineLength, minMaxValues.lineLength.min, minMaxValues.lineLength.max),
         lineWidth: normalize(item.lineWidth, minMaxValues.lineWidth.min, minMaxValues.lineWidth.max),
-        hueColorSaturation: normalize(item.hueColorSaturation, minMaxValues.hueColorSaturation.min, minMaxValues.hueColorSaturation.max),
-        hueLightness: normalize(item.hueLightness, minMaxValues.hueLightness.min, minMaxValues.hueLightness.max),
+        colorSaturation: normalize(item.colorSaturation, minMaxValues.colorSaturation.min, minMaxValues.colorSaturation.max),
+        colorLightness: normalize(item.colorLightness, minMaxValues.colorLightness.min, minMaxValues.colorLightness.max),
         dashArray: normalize(item.dashArray, minMaxValues.dashArray.min, minMaxValues.dashArray.max),
     }));
 }
@@ -1404,57 +1563,56 @@ function preparePathData(pathData) {
     // computeRawPathData(features);
     const minMaxValues = computeMinMaxRanges(pathData);
     normalisedPathData = normalizePathData(pathData, minMaxValues);
-    console.log("Normalized path data:", normalisedPathData);
 }
-preparePathData(pathData);
+// preparePathData(pathData);
 
-let audioContext;
+let audioContexttmp;
 let audioBuffer;
 let animationFrameId;
 let grainSourcePosition = 0; // Default grain source position
 let activeGrains = []; // To track active grains and stop them
 let masterGainNode; // Master gain node for volume control
 let playbackMarkerX = 0; // Position of the playback marker
-let isPlaying = false; // Playback state
+let isPlayingtmp = false; // Playback state
 
-const canvas = document.getElementById("waveformCanvas");
-const ctx = canvas.getContext("2d");
+// const canvas = document.getElementById("waveformCanvas");
+// const ctx = canvas.getContext("2d");
 
 // Draw the waveform
-function drawWaveform(buffer) {
-    const data = buffer.getChannelData(0); // Use the first channel
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
+// function drawWaveform(buffer) {
+//     const data = buffer.getChannelData(0); // Use the first channel
+//     const canvasWidth = canvas.width;
+//     const canvasHeight = canvas.height;
 
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+//     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    const step = Math.ceil(data.length / canvasWidth);
-    const amp = canvasHeight / 2;
+//     const step = Math.ceil(data.length / canvasWidth);
+//     const amp = canvasHeight / 2;
 
-    ctx.beginPath();
-    ctx.moveTo(0, amp);
-    for (let i = 0; i < canvasWidth; i++) {
-        const min = Math.min(...data.slice(i * step, (i + 1) * step));
-        const max = Math.max(...data.slice(i * step, (i + 1) * step));
-        ctx.lineTo(i, (1 + max) * amp);
-        ctx.lineTo(i, (1 + min) * amp);
-    }
-    ctx.lineTo(canvasWidth, amp);
-    ctx.strokeStyle = "blue";
-    ctx.stroke();
-}
+//     ctx.beginPath();
+//     ctx.moveTo(0, amp);
+//     for (let i = 0; i < canvasWidth; i++) {
+//         const min = Math.min(...data.slice(i * step, (i + 1) * step));
+//         const max = Math.max(...data.slice(i * step, (i + 1) * step));
+//         ctx.lineTo(i, (1 + max) * amp);
+//         ctx.lineTo(i, (1 + min) * amp);
+//     }
+//     ctx.lineTo(canvasWidth, amp);
+//     ctx.strokeStyle = "blue";
+//     ctx.stroke();
+// }
 
 // Draw the red line (playback marker)
 function drawRedLine(position) {
     const canvasWidth = canvas.width;
-    const x = (position / audioBuffer.duration) * canvasWidth;
+    const xAxis = (position / audioBuffer.duration) * canvasWidth;
 
     ctx.save();
     ctx.strokeStyle = "red";
     ctx.lineWidth = 3; // Make it bolder
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
+    ctx.moveTo(xAxis, 0);
+    ctx.lineTo(xAxis, canvas.height);
     ctx.stroke();
     ctx.restore();
 }
@@ -1487,16 +1645,16 @@ function updateCanvas(currentGrainSource, grainSpread) {
     drawRedLine(currentGrainSource);
 }
 
-// Handle grain source position on click
-canvas.addEventListener("click", (event) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left; // X coordinate relative to canvas
-    grainSourcePosition = (x / canvas.width) * audioBuffer.duration; // Map to audio duration
+//! Temporarily commented out
+// // Handle grain source position on click
+// canvas.addEventListener("click", (event) => {
+//     const rect = canvas.getBoundingClientRect();
+//     const xAxis = event.clientX - rect.left; // X coordinate relative to canvas
+//     grainSourcePosition = (xAxis / canvas.width) * audioBuffer.duration; // Map to audio duration
 
-    playbackSpreads = []; // Reset spreads
-    updateCanvas(grainSourcePosition, 0); // Redraw with updated grain position
-    console.log(`Grain source position set to ${grainSourcePosition} seconds.`);
-});
+//     playbackSpreads = []; // Reset spreads
+//     updateCanvas(grainSourcePosition, 0); // Redraw with updated grain position
+// });
 
 // Animate grain spread and marker during playback
 function animateGrainSpread(totalDuration, grainSpread) {
@@ -1505,8 +1663,8 @@ function animateGrainSpread(totalDuration, grainSpread) {
     function update() {
         const elapsedTime = (performance.now() - startTime) / 1000; // Convert to seconds
 
-        if (elapsedTime > totalDuration || !isPlaying) {
-            isPlaying = false;
+        if (elapsedTime > totalDuration || !isPlayingtmp) {
+            isPlayingtmp = false;
             return;
         }
 
@@ -1528,59 +1686,61 @@ function animateGrainSpread(totalDuration, grainSpread) {
     update();
 }
 
-// Load the waveform after audio is decoded
-document.getElementById("audioFileInput").addEventListener("change", function (event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function () {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            audioContext.decodeAudioData(reader.result, (buffer) => {
-                audioBuffer = buffer;
-                drawWaveform(audioBuffer); // Draw the waveform once the buffer is loaded
-            });
-        };
-        reader.readAsArrayBuffer(file);
-    }
-});
+//! Temporarily commented out
+// // Load the waveform after audio is decoded
+// document.getElementById("audioFileInput").addEventListener("change", function (event) {
+//     const file = event.target.files[0];
+//     if (file) {
+//         const reader = new FileReader();
+//         reader.onload = function () {
+//             const audioContexttmp = new (window.AudioContext || window.webkitAudioContext)();
+//             audioContexttmp.decodeAudioData(reader.result, (buffer) => {
+//                 audioBuffer = buffer;
+//                 drawWaveform(audioBuffer); // Draw the waveform once the buffer is loaded
+//             });
+//         };
+//         reader.readAsArrayBuffer(file);
+//     }
+// });
 
-// Start playback and animate grain spread
-document.getElementById("startGranulator").addEventListener("click", function () {
-    if (!audioBuffer) {
-        alert("Please load an audio file first!");
-        return;
-    }
+// // Start playback and animate grain spread
+// document.getElementById("playGranulator").addEventListener("click", function () {
+//     if (!audioBuffer) {
+//         alert("Please load an audio file first!");
+//         return;
+//     }
 
-    const totalDuration = audioBuffer.duration; // Assume duration based on audio file
-    isPlaying = true;
+//     const totalDuration = audioBuffer.duration; // Assume duration based on audio file
+//     isPlayingtmp = true;
 
-    const grainSpread = 0.2; // Define spread in seconds
-    // animateGrainSpread(totalDuration, grainSpread);
-});
+//     const grainSpread = 0.2; // Define spread in seconds
+//     // animateGrainSpread(totalDuration, grainSpread);
+// });
 
-// Load and decode the audio file
-document.getElementById("audioFileInput").addEventListener("change", function (event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function () {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            audioContext.decodeAudioData(reader.result, (buffer) => {
-                audioBuffer = buffer;
-                drawWaveform(audioBuffer); // Draw the waveform once the buffer is loaded
+//! Temporarily commented out
+// // Load and decode the audio file
+// document.getElementById("audioFileInput").addEventListener("change", function (event) {
+//     const file = event.target.files[0];
+//     if (file) {
+//         const reader = new FileReader();
+//         reader.onload = function () {
+//             audioContexttmp = new (window.AudioContext || window.webkitAudioContext)();
+//             audioContexttmp.decodeAudioData(reader.result, (buffer) => {
+//                 audioBuffer = buffer;
+//                 drawWaveform(audioBuffer); // Draw the waveform once the buffer is loaded
 
 
-                // Initialize masterGainNode
-                masterGainNode = audioContext.createGain();
-                masterGainNode.gain.value = 0.8; // Default volume, adjust as needed
-                masterGainNode.connect(audioContext.destination);
+//                 // Initialize masterGainNode
+//                 masterGainNode = audioContexttmp.createGain();
+//                 masterGainNode.gain.value = 0.8; // Default volume, adjust as needed
+//                 masterGainNode.connect(audioContexttmp.destination);
 
-                console.log("Audio loaded and ready for granulation.");
-            });
-        };
-        reader.readAsArrayBuffer(file);
-    }
-});
+//                 console.log("Audio loaded and ready for granulation.");
+//             });
+//         };
+//         reader.readAsArrayBuffer(file);
+//     }
+// });
 
 // Draw vertical progress line
 function drawVerticalLine() {
@@ -1602,13 +1762,19 @@ function drawVerticalLine() {
 }
 
 // Update the position of the progress line
-function updateLinePosition(currentTimestamp, totalDuration, canvasWidth) {
+function updateLinePosition(currentTimestamp, totalDuration, canvasWidth, isScrollableMode) {
     const line = document.getElementById("progressLine");
     if (!line) return;
 
-    const x = (currentTimestamp / totalDuration) * canvasWidth;
-    line.setAttribute("x1", x);
-    line.setAttribute("x2", x);
+    const xAxis = (currentTimestamp / totalDuration) * canvasWidth;
+    line.setAttribute("x1", xAxis);
+    line.setAttribute("x2", xAxis);
+    // 👇 NEW: If scrollable mode is enabled, scroll horizontally
+    console.log("isScrollableMode", isScrollableMode);
+    if (isScrollableMode) {
+        const scrollOffset = xAxis - window.innerWidth / 2;
+        window.scrollTo({ left: scrollOffset, behavior: 'smooth' });
+    }
 }
 
 // Animate the progress line based on path data
@@ -1625,21 +1791,21 @@ function smoothUpdateLinePositionForPathData(totalDuration) {
             stopAllGrains(); // Stop any remaining grains
             return;
         }
+        isScrollableMode = document.getElementById("scrollModeToggle").checked;
+        updateLinePosition(elapsedTime, totalDuration, canvasWidth, isScrollableMode);
 
-        updateLinePosition(elapsedTime, totalDuration, canvasWidth);
-
-        function calculatePlaybackRate(y_axis, isInverted = false) {
-            // const normalizedY = y_axis / 800; // Assuming the canvas height is 800px
+        function calculatePlaybackRate(yAxis, isInverted = false) {
+            // const normalizedY = yAxis / 800; // Assuming the canvas height is 800px
             const playbackRate = isInverted 
-                ? map(y_axis, 0, 1, 2, 0.5) // Inverted: High y_axis -> Low playback rate
-                : map(y_axis, 0, 1, 0.5, 2); // Normal: High y_axis -> High playback rate
+                ? map(yAxis, 0, 1, 2, 0.5) // Inverted: High yAxis -> Low playback rate
+                : map(yAxis, 0, 1, 0.5, 2); // Normal: High yAxis -> High playback rate
             return playbackRate;
         }
 
         // Find paths that should trigger grains
         normalisedPathData.forEach((path) => {
-            if (elapsedTime >= path.timestampForGranulator && elapsedTime < path.timestampForGranulator + 0.1) {
-                const playbackRate = calculatePlaybackRate(path.y_axis, true); // Pass `true` for inversion
+            if (elapsedTime >= path.timestamp && elapsedTime < path.timestamp + 0.1) {
+                const playbackRate = calculatePlaybackRate(path.yAxis, true); // Pass `true` for inversion
 
                 playGrain(grainSourcePosition, path.dashArray, path.lineWidth, path.lineLength   * 0.05, playbackRate);
             }
@@ -1653,7 +1819,7 @@ function smoothUpdateLinePositionForPathData(totalDuration) {
 
 // Play a single grain
 function playGrain(baseSourcePosition, dashArraySpread, duration, volume, playbackRate) {
-    const source = audioContext.createBufferSource();
+    const source = audioContexttmp.createBufferSource();
     source.buffer = audioBuffer;
 
     // Calculate a randomized source position based on the dashArray spread
@@ -1665,8 +1831,8 @@ function playGrain(baseSourcePosition, dashArraySpread, duration, volume, playba
 
     source.playbackRate.value = playbackRate;
 
-    const gainNode = audioContext.createGain();
-    const now = audioContext.currentTime;
+    const gainNode = audioContexttmp.createGain();
+    const now = audioContexttmp.currentTime;
 
     // Apply fade-in and fade-out for smoother transitions
     gainNode.gain.setValueAtTime(0, now);
@@ -1710,20 +1876,21 @@ function startGranulation() {
         return;
     }
 
-    const totalDuration = normalisedPathData[normalisedPathData.length - 1].timestampForGranulator;
+    const totalDuration = normalisedPathData[normalisedPathData.length - 1].timestamp;
     drawVerticalLine();
     smoothUpdateLinePositionForPathData(totalDuration);
 }
 
-// Map features to path attributes and start granulation
-document.getElementById("startGranulator").addEventListener("click", function () {
-    if (!audioBuffer) {
-        alert("Please load an audio file first!");
-        return;
-    }
+//! Temporarily commented out
+// // Map features to path attributes and start granulation
+// document.getElementById("playGranulator").addEventListener("click", function () {
+//     if (!audioBuffer) {
+//         alert("Please load an audio file first!");
+//         return;
+//     }
 
-    startGranulation();
-});
+//     startGranulation();
+// });
 
 // // Adjust grain source position using slider
 // document.getElementById("grainSourcePositionSlider").addEventListener("input", function (event) {
@@ -1732,88 +1899,86 @@ document.getElementById("startGranulator").addEventListener("click", function ()
 // });
 
 
-
-
 // Define variables for the synth
-let synthAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-let synthIsPlaying = false; // To manage the playback state
-let synthPathData = []; // Store normalized path data for the synth
+// let synthAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+// let synthIsPlaying = false; // To manage the playback state
+// let synthPathData = []; // Store normalized path data for the synth
 // let selectedWaveform = "sine"; // Default waveform
-synthPathData = pathData;
+// synthPathData = pathData;
 
 // Play a wave with specified parameters
-function playSynthWave(frequency, volume, duration, distortion) {
-    const oscillator = synthAudioContext.createOscillator();
-    const gainNode = synthAudioContext.createGain();
-    const waveShaper = synthAudioContext.createWaveShaper();
+// function playSynthWave(frequency, volume, duration, distortion) {
+//     const oscillator = synthAudioContext.createOscillator();
+//     const gainNode = synthAudioContext.createGain();
+//     const waveShaper = synthAudioContext.createWaveShaper();
 
-    // Configure oscillator
-    oscillator.type = selectedWaveform; // Use the selected waveform
-    oscillator.frequency.value = frequency;
+//     // Configure oscillator
+//     oscillator.type = selectedWaveform; // Use the selected waveform
+//     oscillator.frequency.value = frequency;
 
-    // Configure gain with smooth fade-in and fade-out
-    const now = synthAudioContext.currentTime;
-    gainNode.gain.setValueAtTime(0, now); // Start at 0 volume
-    gainNode.gain.linearRampToValueAtTime(volume, now + 0.01); // Fade-in
-    gainNode.gain.setValueAtTime(volume, now + duration - 0.01); // Sustain
-    gainNode.gain.linearRampToValueAtTime(0, now + duration); // Fade-out
+//     // Configure gain with smooth fade-in and fade-out
+//     const now = synthAudioContext.currentTime;
+//     gainNode.gain.setValueAtTime(0, now); // Start at 0 volume
+//     gainNode.gain.linearRampToValueAtTime(volume, now + 0.01); // Fade-in
+//     gainNode.gain.setValueAtTime(volume, now + duration - 0.01); // Sustain
+//     gainNode.gain.linearRampToValueAtTime(0, now + duration); // Fade-out
 
-    // Configure distortion
-    waveShaper.curve = createDistortionCurve(distortion);
-    waveShaper.oversample = "4x";
+//     // Configure distortion
+//     waveShaper.curve = createDistortionCurve(distortion);
+//     waveShaper.oversample = "4x";
 
-    // Connect nodes
-    oscillator.connect(waveShaper).connect(gainNode).connect(synthAudioContext.destination);
+//     // Connect nodes
+//     oscillator.connect(waveShaper).connect(gainNode).connect(synthAudioContext.destination);
 
-    // Start and stop oscillator
-    oscillator.start(now);
-    oscillator.stop(now + duration);
+//     // Start and stop oscillator
+//     oscillator.start(now);
+//     oscillator.stop(now + duration);
 
-    console.log(
-        `Synth Wave: Waveform ${selectedWaveform}, Frequency ${frequency}Hz, Volume ${volume}, Duration ${duration}s, Distortion ${distortion}`
-    );
-}
+//     console.log(
+//         `Synth Wave: Waveform ${selectedWaveform}, Frequency ${frequency}Hz, Volume ${volume}, Duration ${duration}s, Distortion ${distortion}`
+//     );
+// }
 
 // Generate a distortion curve
-function createDistortionCurve(amount) {
-    const curve = new Float32Array(44100);
-    const k = typeof amount === "number" ? amount : 50;
-    const deg = Math.PI / 180;
-    for (let i = 0; i < 44100; i++) {
-        const x = (i * 2) / 44100 - 1;
-        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
-    }
-    return curve;
-}
+// function createDistortionCurve(amount) {
+//     const curve = new Float32Array(44100);
+//     const k = typeof amount === "number" ? amount : 50;
+//     const deg = Math.PI / 180;
+//     for (let i = 0; i < 44100; i++) {
+//         const xAxis = (i * 2) / 44100 - 1;
+//         curve[i] = ((3 + k) * xAxis * 20 * deg) / (Math.PI + k * Math.abs(xAxis));
+//     }
+//     return curve;
+// }
 
 // Play the sketch using the synth
-function playSketchWithSynth() {
-    if (!synthPathData || synthPathData.length === 0) {
-        alert("No sketch data available to play!");
-        return;
-    }
-    toggleSynthButton.textContent = "Stop Synth"; // Update button text
+// function playSketchWithSynth() {
+//     if (!synthPathData || synthPathData.length === 0) {
+//         alert("No sketch data available to play!");
+//         return;
+//     }
+//     playOscillatorButton.textContent = "Stop Synth"; // Update button text
 
-    synthIsPlaying = true;
+//     synthIsPlaying = true;
 
-    synthPathData.forEach((path) => {
-        const frequency = mapSynth(path.y_axis, 800, 0, 100, 1000); // Map y_axis (reverse) to pitch
-        const volume = mapSynth(path.lineLength, 0, 100, 0.1, 1); // Map lineLength to volume
-        const duration = mapSynth(path.lineWidth, 0, 10, 0.1, 1); // Map lineWidth to duration
-        const distortion = mapSynth(path.dashArray, 0, 50, 0, 100); // Map dashArray to distortion
+//     synthPathData.forEach((path) => {
+//         const frequency = mapSynth(path.yAxis, canvasHeight, 0, 100, 1000); // Map yAxis (reverse) to pitch
+//         const volume = mapSynth(path.lineLength, 0, 100, 0.1, 1); // Map lineLength to volume
+//         const duration = mapSynth(path.lineWidth, 0, 10, 0.1, 1); // Map lineWidth to duration
+//         const distortion = mapSynth(path.dashArray, 0, 50, 0, 100); // Map dashArray to distortion
 
-        setTimeout(() => {
-            if (synthIsPlaying) {
-                playSynthWave(frequency, volume, duration, distortion);
-            }
-        }, path.timestampForGranulator * 1000); // Trigger based on timestamp
-    });
-}
+//         setTimeout(() => {
+//             if (synthIsPlaying) {
+//                 playSynthWave(frequency, volume, duration, distortion);
+//             }
+//         }, path.timestamp * 1000); // Trigger based on timestamp
+//     });
+// }
 
-// Map utility function for the synth
-function mapSynth(value, inMin, inMax, outMin, outMax) {
-    return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
-}
+// // Map utility function for the synth
+// function mapSynth(value, inMin, inMax, outMin, outMax) {
+//     return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+// }
 
 // // Stop all synth playback
 // function stopSynthPlayback() {
@@ -1827,22 +1992,22 @@ function mapSynth(value, inMin, inMax, outMin, outMax) {
 //     console.log(`Waveform changed to ${selectedWaveform}`);
 // });
 
-const toggleSynthButton = document.getElementById("toggleSynth");
+// const playOscillatorButton = document.getElementById("playOscillator");
 
-// Update waveform image and synth waveform
-function updateWaveform(waveform) {
-    // Update the displayed image
-    const waveformImage = document.getElementById("waveformImage");
-    waveformImage.src = waveformImages[waveform];
-    waveformImage.alt = `${waveform.charAt(0).toUpperCase() + waveform.slice(1)} Waveform`;
+// // Update waveform image and synth waveform
+// function updateWaveform(waveform) {
+//     // Update the displayed image
+//     const waveformImage = document.getElementById("waveformImage");
+//     waveformImage.src = waveformImages[waveform];
+//     waveformImage.alt = `${waveform.charAt(0).toUpperCase() + waveform.slice(1)} Waveform`;
 
-    // Update the selected waveform for the synth
-    selectedWaveform = waveform;
-    console.log(`Waveform changed to ${selectedWaveform}`);
-}
+//     // Update the selected waveform for the synth
+//     selectedWaveform = waveform;
+//     console.log(`Waveform changed to ${selectedWaveform}`);
+// }
 
 // // Handle arrow button clicks
-// document.getElementById("waveformUp").addEventListener("click", () => {
+// document.getElementById("waveformPrev").addEventListener("click", () => {
 //     const selectElement = document.getElementById("waveformSelect");
 //     if (selectElement.selectedIndex > 0) {
 //         selectElement.selectedIndex -= 1;
@@ -1850,7 +2015,7 @@ function updateWaveform(waveform) {
 //     }
 // });
 
-// document.getElementById("waveformDown").addEventListener("click", () => {
+// document.getElementById("waveformNext").addEventListener("click", () => {
 //     const selectElement = document.getElementById("waveformSelect");
 //     if (selectElement.selectedIndex < selectElement.options.length - 1) {
 //         selectElement.selectedIndex += 1;
@@ -1858,25 +2023,25 @@ function updateWaveform(waveform) {
 //     }
 // });
 
-// Toggle play and stop functionality
-toggleSynthButton.addEventListener("click", () => {
-    if (synthIsPlaying) {
-        // selectedWaveform = event.target.value;
-        console.log(selectedWaveform)
-        stopSynthPlayback();
-    } else {
-        playSketchWithSynth();
-    }
-});
+// // Toggle play and stop functionality
+// playOscillatorButton.addEventListener("click", () => {
+//     if (synthIsPlaying) {
+//         // selectedWaveform = event.target.value;
+//         console.log(selectedWaveform)
+//         stopSynthPlayback();
+//     } else {
+//         playSketchWithSynth();
+//     }
+// });
 // Function to stop the synth
-function stopSynthPlayback() {
-    synthIsPlaying = false;
-    toggleSynthButton.textContent = "Play Synth"; // Update button text
+// function stopSynthPlayback() {
+//     synthIsPlaying = false;
+//     playOscillatorButton.textContent = "Play Synth"; // Update button text
 
-    // Your existing stop logic here
-    // clearInterval(synthPlaybackInterval); // Clear playback interval
-    console.log("Synth playback stopped.");
-}
+//     // Your existing stop logic here
+//     // clearInterval(synthPlaybackInterval); // Clear playback interval
+//     console.log("Synth playback stopped.");
+// }
 
 // // Add event listener for the synth play button
 // document.getElementById("playSynth").addEventListener("click", playSketchWithSynth);
@@ -1885,18 +2050,1027 @@ function stopSynthPlayback() {
 // document.getElementById("stopSynth").addEventListener("click", stopSynthPlayback);
 
 
+//! -------------------------------------------------------------------
+//! Objectifier stuff (moved to objectifier.js)
+//! -------------------------------------------------------------------
+
+// // ===============================
+// // 🎯 Assign features to regions before visualization
+// // ===============================
+// function assignFeaturesToRegions(clusters, features) {
+//     clusters.forEach(cluster => {
+//         cluster.regions.forEach(region => {region.features = features.filter(f =>
+//                 f.timestamp >= region.start_time && f.timestamp <= region.end_time
+//             );
+//         });
+//     });
+// }
+
+// // ===============================
+// // 📐 Precompute layout and feature summaries per region
+// // ===============================
+// function computeVisualDataForRegions(clusters, maxDuration, canvasWidth) {
+//     clusters.forEach(cluster => {
+//         cluster.regions.forEach(region => {
+//             const startX = map(region.start_time, 0, maxDuration, 0, canvasWidth);
+//             const endX = map(region.end_time, 0, maxDuration, 0, canvasWidth);
+//             const width = endX - startX;
+
+//             const avg = computeAverageFeatures(region.features || []); region["visual"] = { startX, width, avg };
+//         });
+//     });
+// }
+
+// function drawUnifiedRegionPathFromVisual(svg, region, maxDuration, canvasWidth, baseColor = "hsl(0, 70%, 50%)", loudnessThreshold = 1, draw) {
+//     const regionFrames = region.features;
+
+//     const avgRoughness = regionFrames.reduce((sum, f) => sum + (f.visual?.roughness ?? 0.3), 0) / regionFrames.length;
+//     const pattern = createAdaptiveTexturePattern(draw, avgRoughness, `${region.start_time}-${region.end_time}`);
+//     const grainPattern = createGrainTexturePattern(draw, avgRoughness, `${region.start_time}-${region.end_time}`);
+
+
+//     if (!regionFrames || regionFrames.length < 2) return;
+
+//     const yMin = 100, yMax = draw.height() - 100;
+
+//     const perceivedOpacity = loudness => {
+//         return Math.max(0, Math.min(1, (loudness - 0.2) / (loudnessThreshold - 0.2)));
+//     };
+
+//     const topPoints = [];
+//     const bottomPoints = [];
+
+//     for (let i = 0; i < regionFrames.length; i++) {
+//         const f = regionFrames[i];
+//         if (!f.visual) continue;
+
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const y = f.visual.yAxis;
+//         const height = f.visual.lineLength ?? 60;
+//         const mod = f.visual.mod ?? 0;
+
+//         const yTop = y - height / 2 - mod;
+//         const yBot = y + height / 2 + mod;
+
+//         topPoints.push([xAxis, yTop]);
+//         bottomPoints.unshift([xAxis, yBot]);
+//     }
+
+//     if (topPoints.length < 2 || bottomPoints.length < 2) return;
+
+//     const fullPoints = [...topPoints, ...bottomPoints];
+
+//     const pathData = catmullRomToPath(fullPoints);  // Smooth closed path
+
+//     const avgLoudness = regionFrames.reduce((acc, f) => acc + (f.loudness ?? 0), 0) / regionFrames.length;
+//     const alpha = perceivedOpacity(avgLoudness);
+
+//     draw.path(pathData)
+//         .fill({ color: "#000", opacity: 0 })
+//         .opacity(alpha)
+//         .stroke({ width: 0.5, color: "#000", opacity: 0.1 });
+// }
+
+// function drawUnifiedRegionPathFromVisual(
+//     svg,
+//     region,
+//     maxDuration,
+//     canvasWidth,
+//     baseColor = "hsl(0, 70%, 50%)",
+//     loudnessThreshold = 1,
+//     draw
+//   ) {
+//     const regionFrames = region.features;
+  
+//     if (!regionFrames || regionFrames.length < 2) return;
+  
+//     const avgRoughness = regionFrames.reduce(
+//       (sum, f) => sum + (f.visual?.roughness ?? 0.3),
+//       0
+//     ) / regionFrames.length;
+//     const pattern = createAdaptiveTexturePattern(
+//       draw,
+//       avgRoughness,
+//       `${region.start_time}-${region.end_time}`
+//     );
+//     const grainPattern = createGrainTexturePattern(
+//       draw,
+//       avgRoughness,
+//       `${region.start_time}-${region.end_time}`
+//     );
+  
+//     // === Robust stats ===
+//     const ys = regionFrames.map(f => f.visual?.yAxis ?? 0);
+//     const ysSorted = [...ys].sort((a, b) => a - b);
+//     const medianY = ysSorted[Math.floor(ysSorted.length / 2)];
+//     const p10 = ysSorted[Math.floor(ysSorted.length * 0.1)];
+//     const p90 = ysSorted[Math.floor(ysSorted.length * 0.9)];
+  
+//     const lengths = regionFrames.map(f => f.visual?.lineLength ?? 60);
+//     const lengthsSorted = [...lengths].sort((a, b) => a - b);
+//     const medianLength = lengthsSorted[Math.floor(lengthsSorted.length / 2)];
+//     const p10Length = lengthsSorted[Math.floor(lengthsSorted.length * 0.1)];
+//     const p90Length = lengthsSorted[Math.floor(lengthsSorted.length * 0.9)];
+  
+//     const topPoints = [];
+//     const bottomPoints = [];
+  
+//     for (let i = 0; i < regionFrames.length; i++) {
+//       const f = regionFrames[i];
+//       if (!f.visual) continue;
+  
+//       const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+  
+//       // === Clamp yAxis and lineLength to robust range ===
+//       let y = f.visual.yAxis;
+//       y = clamp(y, p10, p90);
+  
+//       let height = f.visual.lineLength ?? medianLength;
+//       height = clamp(height, p10Length, p90Length);
+  
+//       const mod = f.visual.mod ?? 0;
+  
+//       const yTop = y - height / 2 - mod;
+//       const yBot = y + height / 2 + mod;
+  
+//       topPoints.push([xAxis, yTop]);
+//       bottomPoints.unshift([xAxis, yBot]);
+//     }
+  
+//     if (topPoints.length < 2 || bottomPoints.length < 2) return;
+  
+//     const fullPoints = [...topPoints, ...bottomPoints];
+  
+//     const pathData = catmullRomToPath(fullPoints); // Smooth closed path
+  
+//     const avgLoudness =
+//       regionFrames.reduce((acc, f) => acc + (f.loudness ?? 0), 0) /
+//       regionFrames.length;
+//     const perceivedOpacity = loudness =>
+//       Math.max(0, Math.min(1, (loudness - 0.2) / (loudnessThreshold - 0.2)));
+//     const alpha = perceivedOpacity(avgLoudness);
+  
+//     draw.path(pathData)
+//       .fill({ color: "#000", opacity: 0 })
+//       .opacity(alpha)
+//       .stroke({ width: 0.5, color: "#000", opacity: 0.1 });
+//   }
+
+
+// function createGrainTexturePattern(draw, roughness, regionId) {
+//     const patternId = `grain-${regionId}`;
+
+//     const patternSize = 14 + (1 - roughness) * 12;
+//     const density = Math.floor(40 + roughness * 120);
+//     const baseOpacity = 0.08 + roughness * 0.4;
+//     const maxRadius = 1.8 - roughness * 1.2;
+
+//     const pattern = draw.pattern(patternSize, patternSize, function (add) {
+//         if (roughness < 0.2) {
+//             // ✨ Smooth fill — fog-like micro blur
+//             add.rect(patternSize, patternSize)
+//                 .fill('#333')
+//                 .opacity(0.02 + (1 - roughness) * 0.06);
+//         }
+
+//         for (let i = 0; i < density; i++) {
+//             const xAxis = Math.random() * patternSize;
+//             const y = Math.random() * patternSize;
+//             const r = Math.random() * maxRadius + 0.4;
+
+//             add.circle(r * 2)
+//                 .center(xAxis, y)
+//                 .fill('#222')
+//                 .opacity(baseOpacity);
+//         }
+//     });
+
+//     pattern.id(patternId);
+//     return pattern;
+// }
+
+
+
+// ===============================
+// 📌 Draw overlays with expressive shapes per region
+// ===============================
+// function drawClusterOverlays(clusters, features, svgContainer, canvasWidth, canvasHeight, maxDuration) {
+//     assignFeaturesToRegions(clusters, features);
+//     computeVisualDataForRegions(clusters, maxDuration, canvasWidth);
+
+//     console.log(features)
+
+//     assignFeaturesToRegions(clusters, features);
+//     const draw = SVG().addTo('#svgCanvas').size('100%', canvasHeight);
+
+//     //defineGlobalPatterns(draw);
+
+
+//     clusters.forEach(cluster => {
+//         cluster.regions.forEach(region => {
+//             const startX = map(region.start_time, 0, maxDuration, 0, canvasWidth);
+//             const endX = map(region.end_time, 0, maxDuration, 0, canvasWidth);
+//             const width = endX - startX;
+
+//             const overlay = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+//             overlay.setAttribute("xAxis", startX);
+//             overlay.setAttribute("y", 0);
+//             overlay.setAttribute("width", width);
+//             overlay.setAttribute("height", canvasHeight);
+//             overlay.setAttribute("fill", cluster.color);
+//             overlay.setAttribute("fill-opacity", 0.53);  // very subtle
+//             overlay.setAttribute("opacity", 0.5);
+//             overlay.setAttribute("class", "cluster-overlay");
+//             svgContainer.appendChild(overlay);
+
+//             const avg = computeAverageFeatures(region.features);
+        
+
+//             const draw = SVG().addTo('#svgCanvas').size(canvasWidth, canvasHeight);
+
+//             drawUnifiedRegionPathFromVisual(svgContainer, region, maxDuration, canvasWidth, cluster.color, 1, draw);
+//             // Create roughness-based sketch layer clipped to region shape
+//             // 🔒 Safe ID generation
+//             const regionKey = region.start_time.toFixed(2).replace('.', '-');
+//             // In your main code:
+//             const clipId = `region-clip-${region.start_time.toFixed(2)}`;
+//             const clipPath = createClipPathFromRegion(draw, region, maxDuration, canvasWidth, canvasHeight, clipId);
+
+//             if (clipPath) {
+//                 drawRoughnessSketch(draw, region, region.features, canvasWidth, maxDuration, canvasHeight, clipPath);
+//             }
+//             // 1. Draw background soft contour region (based on cluster)
+//             drawClusterBlob(draw, region, cluster.color, canvasWidth, canvasHeight, maxDuration);
+
+//             // 2. Draw inner expressive shapes for each subregion (gesture) region.features && drawSubregionGestures(draw, region.features, region, canvasWidth, maxDuration, canvasHeight);
+
+//         });
+//     });
+// }
+
+// function drawClusterOverlays(clusters,features,svgContainer,canvasWidth,canvasHeight,maxDuration)
+// {
+//     assignFeaturesToRegions(clusters,features);
+//     computeVisualDataForRegions(clusters,maxDuration,canvasWidth);
+
+//     // console.log(features);
+
+//     const draw = SVG().addTo('#svgCanvas').size('100%',canvasHeight);
+
+//     clusters.forEach(cluster => {
+//         // === Cluster-level background blob ===
+//         const clusterStart = cluster.start_time;
+//         const clusterEnd = cluster.end_time;
+//         const clusterX = map(clusterStart,0,maxDuration,0,canvasWidth);
+//         const clusterWidth = map(clusterEnd,0,maxDuration,0,canvasWidth) - clusterX;
+
+//         const clusterFeatures = cluster.regions.flatMap(r => r.features || []);
+//         const avgY = clusterFeatures.length
+//             ? clusterFeatures.reduce((sum,f) => sum + (f.visual?.yAxis ?? canvasHeight / 2),0) / clusterFeatures.length
+//             : canvasHeight / 2;
+//         const avgBandwidth = clusterFeatures.length
+//             ? clusterFeatures.reduce((sum,f) => sum + (f.visual?.lineLength ?? 50),0) / clusterFeatures.length
+//             : 50;
+//         // === Check average loudness ===
+//         const avgLoudness = clusterFeatures.length
+//         ? clusterFeatures.reduce((sum,f) => sum + (f.loudness ?? 0),0) / clusterFeatures.length
+//         : 0;
+
+
+//         if (avgLoudness > 0.51) { // adjust this threshold to taste
+//             drawVagueClusterBlob({
+//                 draw,
+//                 features: clusterFeatures,
+//                 color: cluster.color,
+//                 opacity: 0.35,
+//                 maxDuration,
+//                 canvasWidth,
+//                 canvasHeight
+//             });
+//         } else {
+//             console.log("Skipping blob due to silence.");
+//         }
+            
+//         // drawLigetiEnvelopeBlob({
+//         //     draw,
+//         //     features: clusterFeatures,
+//         //     color: cluster.color,
+//         //     opacity: 0.35,
+//         //     maxDuration,
+//         //     canvasWidth,
+//         //     canvasHeight
+//         // });
+            
+//         // drawLigetiClusterBlob({
+//         //     draw,
+//         //     features: clusterFeatures,
+//         //     xAxis: clusterX,
+//         //     width: clusterWidth,
+//         //     color: cluster.color,
+//         //     opacity: 0.35,
+//         //     canvasHeight
+//         // });
+            
+            
+//         const LOUDNESS_THRESHOLD = 0; // same threshold logic as blobs
+
+//         // === Region-level overlays and features ===
+//         cluster.regions.forEach(region => {
+//             const startX = map(region.start_time,0,maxDuration,0,canvasWidth);
+//             const endX = map(region.end_time,0,maxDuration,0,canvasWidth);
+//             const width = endX - startX;
+
+//             const overlay = document.createElementNS("http://www.w3.org/2000/svg","rect");
+//             overlay.setAttribute("xAxis",startX);
+//             overlay.setAttribute("y",0);
+//             overlay.setAttribute("width",width);
+//             overlay.setAttribute("height",canvasHeight);
+//             overlay.setAttribute("fill",cluster.color);
+//             overlay.setAttribute("fill-opacity",0);
+//             overlay.setAttribute("opacity",0.5);
+//             overlay.setAttribute("class","cluster-overlay");
+//             svgContainer.appendChild(overlay);
+
+//             const avg = computeAverageFeatures(region.features);
+//             drawUnifiedRegionPathFromVisual(svgContainer,region,maxDuration,canvasWidth,cluster.color,1,draw);
+
+//             const clipId = `region-clip-${region.start_time.toFixed(2)}`;
+//             const clipPath = createClipPathFromRegion(draw,region,maxDuration,canvasWidth,canvasHeight,clipId);
+
+//             if (clipPath) {
+//                 drawRoughnessSketch(draw,region,region.features,canvasWidth,maxDuration,canvasHeight,clipPath);
+//             }
+
+//             // ✅ Only draw gesture shapes if region is perceptually strong enough
+//             if (region.features && region.features.length > 0) {
+//                 const avgLoudness = region.features.reduce((sum,f) => sum + (f.loudness ?? 0),0) / region.features.length;
+
+//                 if (avgLoudness > LOUDNESS_THRESHOLD) {
+//                 drawSubregionGestures(draw,region.features,region,canvasWidth,maxDuration,canvasHeight);
+//                 } else {
+//                 console.log(`Skipping subregion gestures: too quiet, avg loudness = ${avgLoudness}`);
+//                 }
+//             }
+//         });
+//     });
+// }
+
+// function drawVagueClusterBlob({ draw, features, color, opacity, maxDuration, canvasWidth, canvasHeight }) {
+//     if (!features || features.length < 2) return;
+
+//     const padding = 40;
+//     const stride = Math.max(1, Math.floor(features.length / 20)); // Fewer points
+
+//     const topPoints = [];
+//     const bottomPoints = [];
+
+//     for (let i = 0; i < features.length; i += stride) {
+//         const f = features[i];
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const y = f.visual?.yAxis ?? canvasHeight / 2;
+//         const h = f.visual?.lineLength ?? 30;
+
+//         topPoints.push([xAxis, y - h / 2 - padding]);
+//         bottomPoints.unshift([xAxis, y + h / 2 + padding]);
+//     }
+
+//     const blobPoints = topPoints.concat(bottomPoints, [topPoints[0]]); // Closed shape
+
+//     // Create vague reference box to morph from
+//     const xValues = blobPoints.map(p => p[0]);
+//     const yValues = blobPoints.map(p => p[1]);
+//     const minX = Math.min(...xValues), maxX = Math.max(...xValues);
+//     const minY = Math.min(...yValues), maxY = Math.max(...yValues);
+
+//     const roundedBox = [
+//         [minX, minY],
+//         [maxX, minY],
+//         [maxX, maxY],
+//         [minX, maxY],
+//         [minX, minY]
+//     ];
+
+//     const vaguePath = flubber.interpolate(
+//         flubber.toPathString(roundedBox),
+//         flubber.toPathString(blobPoints),
+//         { maxSegmentLength: 10 }
+//     )(0.8); // 80% interpolated toward actual blob
+
+//     draw.path(vaguePath)
+//         .fill(color)
+//         .stroke({ width: 0 })
+//         .opacity(opacity)
+//         .attr({
+//             'fill-opacity': opacity,
+//             'vector-effect': 'non-scaling-stroke',
+//             'stroke-linejoin': 'round',
+//             'stroke-linecap': 'round',
+//             'filter': 'url(#blur)' // Optional
+//         });
+// }
+
+// function drawVagueClusterBlob({ draw, features, color, opacity, maxDuration, canvasWidth, canvasHeight }) {
+//     if (!features || features.length < 2) return;
+
+//     const padding = 40;
+//     const stride = Math.max(1, Math.floor(features.length / 20)); // Fewer points
+
+//     const topPoints = [];
+//     const bottomPoints = [];
+
+//     for (let i = 0; i < features.length; i += stride) {
+//         const f = features[i];
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const y = f.visual?.yAxis ?? canvasHeight / 2;
+//         const h = f.visual?.lineLength ?? 30;
+
+//         topPoints.push([xAxis, y - h / 2 - padding]);
+//         bottomPoints.unshift([xAxis, y + h / 2 + padding]);
+//     }
+
+//     const blobPoints = topPoints.concat(bottomPoints, [topPoints[0]]); // Closed shape
+
+//     // Create vague reference box to morph from
+//     const xValues = blobPoints.map(p => p[0]);
+//     const yValues = blobPoints.map(p => p[1]);
+//     const minX = Math.min(...xValues), maxX = Math.max(...xValues);
+//     const minY = Math.min(...yValues), maxY = Math.max(...yValues);
+
+//     const roundedBox = [
+//         [minX, minY],
+//         [maxX, minY],
+//         [maxX, maxY],
+//         [minX, maxY],
+//         [minX, minY]
+//     ];
+
+//     const vaguePath = flubber.interpolate(
+//         flubber.toPathString(roundedBox),
+//         flubber.toPathString(blobPoints),
+//         { maxSegmentLength: 10 }
+//     )(0.8); // 80% interpolated toward actual blob
+
+//     draw.path(vaguePath)
+//         .fill(color)
+//         .stroke({ width: 0 })
+//         .opacity(opacity)
+//         .attr({
+//             'fill-opacity': opacity,
+//             'vector-effect': 'non-scaling-stroke',
+//             'stroke-linejoin': 'round',
+//             'stroke-linecap': 'round',
+//             'filter': 'url(#blur)' // Optional
+//         });
+// }
+
+// function drawVagueClusterBlob({
+//     draw,
+//     features,
+//     color,
+//     opacity,
+//     maxDuration,
+//     canvasWidth,
+//     canvasHeight
+// }) {
+//     if (!features || features.length < 2) return;
+
+//     const padding = 40;
+//     const stride = Math.max(1, Math.floor(features.length / 20));
+//     const threshold = 0.01; // loudness threshold
+//     const minLineLength = 20;
+
+//     const topPoints = [];
+//     const bottomPoints = [];
+
+//     let lastY = canvasHeight / 2;
+//     let lastH = 50;
+
+//     for (let i = 0; i < features.length; i += stride) {
+//         const f = features[i];
+//         const loudness = f.loudness ?? 0;
+
+//         let y, h;
+
+//         if (loudness > threshold) {
+//             y = f.visual?.yAxis ?? lastY;
+//             h = f.visual?.lineLength ?? lastH;
+//             lastY = y;
+//             lastH = h;
+//         } else {
+//             // If silent, hold previous or fallback
+//             y = lastY;
+//             h = Math.max(lastH * 0.8, minLineLength); // shrink a bit if needed
+//         }
+
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+
+//         topPoints.push([xAxis, y - h / 2 - padding]);
+//         bottomPoints.unshift([xAxis, y + h / 2 + padding]);
+//     }
+
+//     const blobPoints = topPoints.concat(bottomPoints, [topPoints[0]]);
+
+//     // OPTIONAL: use d3-shape for smooth closed path
+//     const smoothPath = d3.line()
+//         .xAxis(d => d[0])
+//         .y(d => d[1])
+//         .curve(d3.curveCatmullRomClosed.alpha(0.5)); // smooth closed curve
+
+//     const pathData = smoothPath(blobPoints);
+
+//     draw.path(pathData)
+//         .fill(color)
+//         .stroke({ width: 0 })
+//         .opacity(opacity)
+//         .attr({
+//             'fill-opacity': opacity,
+//             'vector-effect': 'non-scaling-stroke',
+//             'stroke-linejoin': 'round',
+//             'stroke-linecap': 'round',
+//             'filter': 'url(#blur)'
+//         });
+// }
+
+// function drawVagueClusterBlob({
+//     draw,
+//     features,
+//     color,
+//     opacity,
+//     maxDuration,
+//     canvasWidth,
+//     canvasHeight
+// }) {
+//     if (!features || features.length < 2) return;
+
+//     const padding = 40;
+//     const stride = Math.max(1, Math.floor(features.length / 20));
+//     const threshold = 10; // silence threshold
+//     const minLineLength = 20;
+
+//     const topPoints = [];
+//     const bottomPoints = [];
+
+//     let lastY = canvasHeight / 2;
+//     let lastH = 50;
+
+//     for (let i = 0; i < features.length; i += stride) {
+//         const f = features[i];
+//         const loudness = f.loudness ?? 0;
+
+//         let y, h;
+
+//         if (loudness > threshold) {
+//             y = f.visual?.yAxis ?? lastY;
+//             h = f.visual?.lineLength ?? lastH;
+//             lastY = y;
+//             lastH = h;
+//         } else {
+//             // If silent, hold previous good value, but soften length a bit
+//             y = lastY;
+//             h = Math.max(lastH * 0.8, minLineLength);
+//         }
+
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+
+//         topPoints.push([xAxis, y - h / 2 - padding]);
+//         bottomPoints.unshift([xAxis, y + h / 2 + padding]);
+//     }
+
+//     // Close the blob
+//     const blobPoints = topPoints.concat(bottomPoints, [topPoints[0]]);
+
+//     // Reference box for morph
+//     const xValues = blobPoints.map(p => p[0]);
+//     const yValues = blobPoints.map(p => p[1]);
+//     const minX = Math.min(...xValues), maxX = Math.max(...xValues);
+//     const minY = Math.min(...yValues), maxY = Math.max(...yValues);
+
+//     const roundedBox = [
+//         [minX, minY],
+//         [maxX, minY],
+//         [maxX, maxY],
+//         [minX, maxY],
+//         [minX, minY]
+//     ];
+
+//     // Interpolate the vague blob
+//     const vaguePath = flubber.interpolate(
+//         flubber.toPathString(roundedBox),
+//         flubber.toPathString(blobPoints),
+//         { maxSegmentLength: 10 }
+//     )(0.8);
+
+//     draw.path(vaguePath)
+//         .fill(color)
+//         .stroke({ width: 0 })
+//         .opacity(opacity)
+//         .attr({
+//             'fill-opacity': opacity,
+//             'vector-effect': 'non-scaling-stroke',
+//             'stroke-linejoin': 'round',
+//             'stroke-linecap': 'round',
+//             'filter': 'url(#blur)'
+//         });
+// }
+
+
+  
+//   function drawVagueClusterBlob({
+//     draw,
+//     features,
+//     color,
+//     opacity,
+//     maxDuration,
+//     canvasWidth,
+//     canvasHeight
+//   }) {
+//     if (!features || features.length < 2) return;
+  
+//     const padding = 40;
+//     const stride = Math.max(1, Math.floor(features.length / 20));
+//     const threshold = 10; // loudness silence threshold
+//     const minLineLength = 20;
+  
+//     const topPoints = [];
+//     const bottomPoints = [];
+  
+//     // === Compute cluster Y stats for clamping ===
+//     const ys = features.map(f => f.visual?.yAxis ?? canvasHeight / 2);
+//     const ysSorted = [...ys].sort((a, b) => a - b);
+//     const lowerPercentile = ysSorted[Math.floor(ysSorted.length * 0.1)];
+//     const upperPercentile = ysSorted[Math.floor(ysSorted.length * 0.9)];
+//     const medianY = ysSorted[Math.floor(ysSorted.length / 2)];
+
+//     const clampMin = lowerPercentile;
+//     const clampMax = upperPercentile;
+
+//     let lastY = medianY;
+//     let lastH = 50;
+  
+//     for (let i = 0; i < features.length; i += stride) {
+//       const f = features[i];
+//       const loudness = f.loudness ?? 0;
+  
+//       let y, h;
+  
+//       if (loudness > threshold) {
+//         y = f.visual?.yAxis ?? lastY;
+//         h = f.visual?.lineLength ?? lastH;
+//         lastY = y;
+//         lastH = h;
+//       } else {
+//         y = lastY;
+//         h = Math.max(lastH * 0.8, minLineLength);
+//       }
+  
+//       // ✅ Clamp Y-axis to stay inside reasonable blob band
+//       y = clamp(y, clampMin, clampMax);
+  
+//       const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+  
+//       topPoints.push([xAxis, y - h / 2 - padding]);
+//       bottomPoints.unshift([xAxis, y + h / 2 + padding]);
+//     }
+  
+//     const blobPoints = topPoints.concat(bottomPoints, [topPoints[0]]);
+  
+//     const xValues = blobPoints.map(p => p[0]);
+//     const yValues = blobPoints.map(p => p[1]);
+//     const minX = Math.min(...xValues),
+//       maxX = Math.max(...xValues);
+//     const minYShape = Math.min(...yValues),
+//       maxYShape = Math.max(...yValues);
+  
+//     const roundedBox = [
+//       [minX, minYShape],
+//       [maxX, minYShape],
+//       [maxX, maxYShape],
+//       [minX, maxYShape],
+//       [minX, minYShape]
+//     ];
+  
+//     const vaguePath = flubber.interpolate(
+//       flubber.toPathString(roundedBox),
+//       flubber.toPathString(blobPoints),
+//       { maxSegmentLength: 10 }
+//     )(0.8);
+  
+//     draw.path(vaguePath)
+//       .fill(color)
+//       .stroke({ width: 0 })
+//       .opacity(opacity)
+//       .attr({
+//         'fill-opacity': opacity,
+//         'vector-effect': 'non-scaling-stroke',
+//         'stroke-linejoin': 'round',
+//         'stroke-linecap': 'round',
+//         'filter': 'url(#blur)'
+//       });
+//   }
+  
+
+
+
+// function drawLigetiEnvelopeBlob({ draw, features, color, opacity, maxDuration, canvasWidth, canvasHeight }) {
+//     if (!features || features.length === 0) return;
+
+//     const padding = 20;
+//     const topPoints = [];
+//     const bottomPoints = [];
+
+//     features.forEach(f => {
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const y = f.visual?.yAxis ?? canvasHeight / 2;
+//         const h = f.visual?.lineLength ?? 30;
+
+//         topPoints.push([xAxis, y - h / 2 - padding]);
+//         bottomPoints.unshift([xAxis, y + h / 2 + padding]); // reverse order
+//     });
+
+//     const pathPoints = topPoints.concat(bottomPoints, [topPoints[0]]); // close loop
+
+//     const pathStr = flubber.toPathString(pathPoints);
+
+//     draw.path(pathStr)
+//         .fill(color)
+//         .stroke({ width: 0 })
+//         .opacity(opacity)
+//         .attr({
+//             'fill-opacity': opacity,
+//             'vector-effect': 'non-scaling-stroke',
+//             'stroke-linejoin': 'round',
+//             'stroke-linecap': 'round',
+//             'filter': 'url(#blur)' // optional
+//         });
+// }
+
+
+// function drawLigetiClusterBlob({ draw, features, xAxis, width, color, opacity, canvasHeight }) {
+//     if (!features || features.length === 0) return;
+
+//     const padding = 100;
+//     const numPoints = 20;
+
+//     // Compute min/max y based on feature positions
+//     const yValues = features.map(f => f.visual?.yAxis ?? canvasHeight / 2);
+//     const minY = Math.min(...yValues) - padding;
+//     const maxY = Math.max(...yValues) + padding;
+
+//     const centerX = xAxis + width / 2;
+//     const points = [];
+
+//     for (let i = 0; i < numPoints; i++) {
+//         const angle = (Math.PI * 2 * i) / numPoints;
+//         const radiusX = width / 2 + (Math.random() - 0.5) * width * 0.2;
+//         const radiusY = (maxY - minY) / 2 + (Math.random() - 0.5) * (maxY - minY) * 0.2;
+//         const px = centerX + Math.cos(angle) * radiusX;
+//         const py = (minY + maxY) / 2 + Math.sin(angle) * radiusY;
+
+//         points.push([px, py]);
+//     }
+
+//     // Close the shape
+//     points.push(points[0]);
+
+//     const pathStr = flubber.toPathString(points);
+
+//     draw.path(pathStr)
+//         .fill(color)
+//         .stroke({ width: 0 })
+//         .opacity(opacity)
+//         .attr({
+//             'fill-opacity': opacity,
+//             'vector-effect': 'non-scaling-stroke',
+//             'stroke-linejoin': 'round',
+//             'stroke-linecap': 'round',
+//             'stroke-width': 0,
+//             'filter': 'url(#blur)'
+//         });
+// }
 
 
 
 
 
 
+// function drawClusterBlob({ draw, xAxis, y, width, height, color, opacity = 0.35 }) {
+//     draw.ellipse(width, height)
+//         .center(xAxis + width / 2, y)
+//         .fill(color)
+//         .opacity(opacity);
+// }
 
 
+// Draw soft background blob for a region
+// function drawClusterBlob(draw, region, color, canvasWidth, canvasHeight, maxDuration) {
+//     const xAxis = map(region.start_time, 0, maxDuration, 0, canvasWidth);
+//     const width = map(region.end_time, 0, maxDuration, 0, canvasWidth) - xAxis;
+
+//     const spectralCentroid = region.avg_features?.spectral_centroid ?? 5000;
+//     const bandwidth = region.avg_features?.spectral_bandwidth ?? 3000;
+//     const maxFreq = 20000;
+
+//     const y = map(spectralCentroid, 0, maxFreq, canvasHeight, 0);
+//     const height = map(bandwidth, 0, maxFreq / 2, 0, canvasHeight * 0.8);
+
+//     // Use soft rounded blob shape approximation
+//     const blob = draw.ellipse(width, height)
+//         .center(xAxis + width / 2, y)
+//         .fill(color)
+//         .opacity(0.12);  // soft background
+// }
+
+// Draw expressive gesture shapes inside each region
+// function drawSubregionGestures(draw, features, region, canvasWidth, maxDuration, canvasHeight) {
+//     if (!features || features.length === 0) return;
+
+//     // Sort features by loudness (descending)
+//     const sortedByLoudness = [...features].sort((a, b) => (b.loudness ?? 0) - (a.loudness ?? 0));
+//     const top3 = sortedByLoudness.slice(0, 3);
+//     const next2 = sortedByLoudness.slice(3, 5); // Optional
+
+//     // === TRIANGLES for top 3 ===
+//     top3.forEach(f => {
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const y = f.visual?.yAxis ?? canvasHeight / 2;
+//         const rawLineWidth = f.visual?.lineWidth ?? 1;
+//         const size = map(rawLineWidth, 1, 5, 5, 20);
+//         const angle = f.visual?.angle ?? 0;
+//         const color = f.visual?.colorHue ?? "#333";
+
+//         // Define an upward-pointing triangle centered at (xAxis, y)
+//         const halfSize = size / 2;
+//         const points = [
+//             [xAxis, y - halfSize],
+//             [xAxis - halfSize * Math.sin(Math.PI / 3), y + halfSize / 2],
+//             [xAxis + halfSize * Math.sin(Math.PI / 3), y + halfSize / 2]
+//         ];
+
+//         draw.polygon(points.map(p => p.join(',')).join(' '))
+//             .fill(color)
+//             .stroke({ color, width: 0.4, opacity: 0.6 })
+//             .rotate((angle * 180) / Math.PI, xAxis, y);
+//     });
+
+//     // === CIRCLES for next 2 (optional) ===
+//     next2.forEach(f => {
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const y = f.visual?.yAxis ?? canvasHeight / 2;
+//         const rawLineWidthForRadius = f.visual?.lineWidth ?? 1;
+//         const radius = map(rawLineWidthForRadius, 1, 5, 1, 5);
+
+//         const rotation = (f.visual?.angle ?? 0) * (180 / Math.PI);
+//         const color = f.visual?.colorHue ?? "#333";
+
+//         draw.circle(radius * 2)
+//             .center(xAxis, y)
+//             .fill(color)
+//             .stroke({ color, width: 0.4, opacity: 0.5 })
+//             .rotate(rotation, xAxis, y);
+//     });
+// }
+
+
+
+
+// ===============================
+// ✨ Compute average features from a region
+// ===============================
+// function computeAverageFeatures(features) {
+//     const sum = {
+//         spectral_centroid: 0,
+//         spectral_flatness: 0,
+//         spectral_bandwidth: 0,         // ✅ added
+//         zerocrossingrate: 0,
+//         brightness: 0,
+//         sharpness: 0,
+//         loudness: 0,
+//         yin_periodicity: 0,
+//         mir_mps_roughness: 0,
+//         crepe_confidence: 0,
+//         crepe_f0: 0,
+//     };
+
+//     features.forEach(f => {
+//         sum.spectral_centroid += f.spectral_centroid || 0;
+//         sum.spectral_flatness += f.spectral_flatness || 0;
+//         sum.spectral_bandwidth += f.spectral_bandwidth || 0;  // ✅ added
+//         sum.zerocrossingrate += f.zerocrossingrate || 0;
+//         sum.brightness += f.brightness || 0;
+//         sum.sharpness += f.sharpness || 0;
+//         sum.loudness += f.loudness || 0;
+//         sum.yin_periodicity += f.yin_periodicity || 0;
+//         sum.mir_mps_roughness += f.mir_mps_roughness || 0;
+//         sum.crepe_confidence += f.crepe_confidence || 0;
+//         sum.crepe_f0 += f.crepe_f0 || 0;
+//     });
+
+//     const count = features.length || 1;
+//     return {
+//         spectral_centroid: sum.spectral_centroid / count,
+//         spectral_flatness: sum.spectral_flatness / count,
+//         spectral_bandwidth: sum.spectral_bandwidth / count,   // ✅ added
+//         zerocrossingrate: sum.zerocrossingrate / count,
+//         brightness: sum.brightness / count,
+//         sharpness: sum.sharpness / count,
+//         loudness: sum.loudness / count,
+//         yin_periodicity: sum.yin_periodicity / count,
+//         mir_mps_roughness: sum.mir_mps_roughness / count,
+//         crepe_confidence: sum.crepe_confidence / count,
+//         crepe_f0: sum.crepe_f0 / count,
+//     };
+// }
+
+// function drawRoughnessSketch(draw, region, features, canvasWidth, maxDuration, canvasHeight, clipElement) {
+//     const group = draw.group().id(`sketch-${region.start_time.toFixed(2)}`).clipWith(clipElement);
+
+//     const maxSampleFrames = 150;
+//     const step = Math.ceil(features.length / maxSampleFrames);
+//     const MAX_TOTAL_LINES = 55000;
+
+//     const roughnessSamples = [];
+
+//     // Step 1: Collect graininess per frame using dashArray
+//     for (let i = 0; i < features.length; i += step) {
+//         const f = features[i];
+//         const dashArray = f.visual?.dashArray ?? 0;
+//         const lineWidth = f.visual?.lineWidth ?? 0.3;
+
+
+//         // Map: low dashArray → dense texture, high dashArray → sparse
+//         const graininess = map(dashArray, 0, 10, 4000, 10); // up to 120 lines at smoothness
+
+//         roughnessSamples.push({ f, lineWidth, graininess });
+//     }
+
+//     // Step 2: Scaling factor if we exceed total line limit
+//     const totalLines = roughnessSamples.reduce((sum, d) => sum + Math.floor(d.graininess), 0);
+//     const scaleFactor = totalLines > MAX_TOTAL_LINES ? MAX_TOTAL_LINES / totalLines : 1;
+
+//     let globalPathData = '';
+//     let opacitySum = 0;
+//     let lineCount = 0;
+
+//     // Step 3: Generate path lines for sketch texture
+//     roughnessSamples.forEach(({ f, lineWidth, graininess }) => {
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const numLines = Math.floor(graininess * scaleFactor);
+//         const lineOpacity = map(lineWidth, 0, 5, 0.05, 1);
+
+
+//         for (let j = 0; j < numLines; j++) {
+//             const offset = (Math.random() - 0.5) * 16;
+//             const y1 = 100 + Math.random() * (canvasHeight - 200);
+//             const y2 = y1 + Math.random() * 40 - 20;
+//             globalPathData += `M ${xAxis + offset} ${y1} L ${xAxis + offset} ${y2} `;
+//             opacitySum += lineOpacity;
+//             lineCount++;
+//         }
+//     });
+
+//     if (lineCount > 0) {
+//         const avgOpacity = Math.min(1, opacitySum / lineCount);
+//         group.path(globalPathData.trim())
+//              .stroke({ color: '#333', width: avgOpacity, opacity: avgOpacity });
+//     }
+// }
+
+
+
+// function createClipPathFromRegion(draw, region, maxDuration, canvasWidth, canvasHeight, clipId) {
+//     const regionFrames = region.features;
+//     if (!regionFrames || regionFrames.length < 2) return null;
+
+//     const topPoints = [], bottomPoints = [];
+
+//     regionFrames.forEach(f => {
+//         if (!f.visual) return;
+
+//         const xAxis = map(f.timestamp, 0, maxDuration, 0, canvasWidth);
+//         const y = f.visual.yAxis;
+//         const h = f.visual.lineLength ?? 60;
+//         const mod = f.visual.mod ?? 0;
+
+//         topPoints.push([xAxis, y - h / 2 - mod]);
+//         bottomPoints.unshift([xAxis, y + h / 2 + mod]);
+//     });
+
+//     const allPoints = topPoints.concat(bottomPoints);
+//     const pathData = catmullRomToPath(allPoints);
+
+//     const clipPath = draw.clip().id(clipId);
+//     clipPath.path(pathData).fill('#000'); // fill color is irrelevant for clip
+
+//     return clipPath; // ✅ RETURN this
+// }
+
+//! -------------------------------------------------------------------
+//! Other stuff
+//! -------------------------------------------------------------------
 
 // let clickedPosition = 0; // Global variable to store the clicked position
-const svgElement = document.getElementById("svgCanvas");
-let selectedElements = [];
+// const svgElement = document.getElementById("svgCanvas");
+// let selectedElements = [];
 
 function initializeSvgDragSelect() {
 return svgDragSelect({
@@ -1936,7 +3110,7 @@ return svgDragSelect({
 
       gsap.registerPlugin(Draggable);
       Draggable.create(group, {
-        type: "x,y",
+        type: "xAxis,y",
         onPress: function() {
           dragSelectInstance.cancel();
         },
@@ -1948,14 +3122,164 @@ return svgDragSelect({
   },
 });
 }
+// let dragSelectInstance = initializeSvgDragSelect();
 
-let dragSelectInstance = initializeSvgDragSelect();
+function createAdaptiveTexturePattern(draw, roughness, regionId) {
+    const patternId = `texture-${regionId}`;
+    const patternSize = 4 + (1 - roughness) * 12;
+    const stripeWidth = 0.4 + roughness * 1.2;
+    const dotRadius = 0.5 + roughness * 1.3;
+
+    const pattern = draw.pattern(patternSize, patternSize, function (add) {
+        if (roughness < 0.3) {
+            // 🎯 Smooth → dense dotted pattern
+            for (let y = 0; y < patternSize; y += dotRadius * 2 + 1) {
+                for (let xAxis = 0; xAxis < patternSize; xAxis += dotRadius * 2 + 1) {
+                    add.circle(dotRadius * 2)
+                        .center(xAxis, y)
+                        .fill('#333');
+                }
+            }
+        } else if (roughness < 0.65) {
+            // 🎯 Medium roughness → diagonal stripe pattern
+            add.line(0, 0, patternSize, patternSize)
+                .stroke({ color: '#444', width: stripeWidth });
+
+            add.line(0, patternSize, patternSize, 0)
+                .stroke({ color: '#444', width: stripeWidth });
+        } else {
+            // 🎯 High roughness → hybrid (dots + stripes)
+            for (let y = 0; y < patternSize; y += dotRadius * 2 + 2) {
+                for (let xAxis = 0; xAxis < patternSize; xAxis += dotRadius * 2 + 2) {
+                    add.circle(dotRadius * 2)
+                        .center(xAxis, y)
+                        .fill('#222');
+                }
+            }
+            add.line(0, 0, patternSize, patternSize)
+                .stroke({ color: '#555', width: stripeWidth * 0.8, opacity: 0.6 });
+
+            add.line(0, patternSize, patternSize, 0)
+                .stroke({ color: '#555', width: stripeWidth * 0.8, opacity: 0.6 });
+        }
+    });
+
+    pattern.id(patternId);
+    return pattern;
+}
 
 
 
-    // cleanup for when the select-on-drag behavior is no longer needed
-    // (including unbinding of the event listeners)
-    // cancel()
+function createHatchPattern(defs, patternId, roughnessRaw) {
+    const roughness = Math.max(0, Math.min(1, roughnessRaw));  // clamp between 0 and 1
+    const spacing = Math.max(3, 5 + (1 - roughness) * 20);      // enforce min spacing
 
+    const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+    pattern.setAttribute("id", patternId);
+    pattern.setAttribute("patternUnits", "userSpaceOnUse");
+    pattern.setAttribute("width", spacing);
+    pattern.setAttribute("height", spacing);
 
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", "0");
+    line.setAttribute("y1", "0");
+    line.setAttribute("x2", spacing.toString());
+    line.setAttribute("y2", spacing.toString());
+    line.setAttribute("stroke", "white");
+    line.setAttribute("stroke-width", "0.5");
+
+    pattern.appendChild(line);
+    defs.appendChild(pattern);
+}
+
+function createDotPattern(defs, patternId, roughnessRaw) {
+    const roughness = Math.max(0, Math.min(1, roughnessRaw));
+    const spacing = Math.max(4, 10 - roughness * 8);
+
+    const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+    pattern.setAttribute("id", patternId);
+    pattern.setAttribute("patternUnits", "userSpaceOnUse");
+    pattern.setAttribute("width", spacing);
+    pattern.setAttribute("height", spacing);
+
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", spacing / 2);
+    circle.setAttribute("cy", spacing / 2);
+    circle.setAttribute("r", spacing * 0.1);
+    circle.setAttribute("fill", "white");
+
+    pattern.appendChild(circle);
+    defs.appendChild(pattern);
+}
+
+function createCrossHatchPattern(defs, patternId, roughnessRaw) {
+    const roughness = Math.max(0, Math.min(1, roughnessRaw));
+    const spacing = Math.max(4, 8 - roughness * 6); // tighter spacing for more roughness
+
+    const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+    pattern.setAttribute("id", patternId);
+    pattern.setAttribute("patternUnits", "userSpaceOnUse");
+    pattern.setAttribute("width", spacing);
+    pattern.setAttribute("height", spacing);
+
+    const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line1.setAttribute("x1", "0");
+    line1.setAttribute("y1", "0");
+    line1.setAttribute("x2", spacing.toString());
+    line1.setAttribute("y2", spacing.toString());
+    line1.setAttribute("stroke", "white");
+    line1.setAttribute("stroke-width", "1");
+
+    const line2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line2.setAttribute("x1", spacing.toString());
+    line2.setAttribute("y1", "0");
+    line2.setAttribute("x2", "0");
+    line2.setAttribute("y2", spacing.toString());
+    line2.setAttribute("stroke", "white");
+    line2.setAttribute("stroke-width", "1");
+
+    pattern.appendChild(line1);
+    pattern.appendChild(line2);
+    defs.appendChild(pattern);
+}
+
+function createCirclePattern(draw, regionId, density = 5, radius = 2, color = '#555') {
+    const patternSize = 10; // smaller = denser pattern
+    const pattern = draw.pattern(patternSize, patternSize, add => {
+        for (let xAxis = 0; xAxis < patternSize; xAxis += density) {
+            for (let y = 0; y < patternSize; y += density) {
+                add.circle(radius).move(xAxis, y).fill(color);
+            }
+        }
+    }).id(`circle-pattern-${regionId}`);
+    return pattern;
+}
+
+function average(values) {
+    if (!values || values.length === 0) return 0;
+    const valid = values.filter(v => typeof v === 'number' && isFinite(v));
+    return valid.length > 0 ? valid.reduce((sum, v) => sum + v, 0) / valid.length : 0;
+}
+
+function catmullRomToPath(points) {
+    if (points.length < 2) return '';
+
+    let d = `M ${points[0][0]},${points[0][1]}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i - 1] || points[i];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[i + 2] || p2;
+
+        const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+        const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+
+        const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+        const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+
+        d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+    }
+
+    return d + ' Z'; // Close the shape
 }

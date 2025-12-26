@@ -48,6 +48,7 @@
 .chameleon-navbar__menu {
     margin-left: 6rem;
     display: flex;
+    align-items: center;
 }
 
 .chameleon-navbar__menu-tab {
@@ -76,6 +77,28 @@
 .chameleon-navbar__menu-tab--active {
     border-bottom: 2px solid #1a73e8;
     color: #1a73e8;
+}
+
+/* //! Added this */
+.examples-dropdown {
+    position: absolute;
+    top: 100%;   /* just below the toggle */
+    left: 0;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+    list-style: none;
+    z-index: 1000;
+
+    /* Reset inherited styles from parent */
+    font-family: initial;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    margin: 0;
 }
 
 .chameleon-navbar__info-area {

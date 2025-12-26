@@ -1,0 +1,149 @@
+<canvas id="granulatorCanvas" width="400" height="400" style="border:1px solid black;"></canvas>
+<button id="sineButton">Load Sine Wave</button>
+<button id="triangleButton">Load Triangle Wave</button>
+<button id="sawtoothButton">Load Sawtooth Wave</button>
+<button id="whitenoiseButton">Load White Noise Wave</button>
+<label>Grain Density:</label>
+<input type="range" id="grainDensitySlider" min="1" max="50" value="10">
+
+
+
+
+<!-- <script>
+
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let audioBuffer = null;
+let activeGrains = [];
+let isPlaying = false;
+let grainDensity = 15; // Number of grains per second
+let grainSize = 0.01; // Default grain size
+let baseSourcePosition = 0.5;
+let dashArraySpread = 0.1;
+let volume = 0.5;
+let playbackRate = 0.6;
+let granulationInterval = null; // Interval for scheduling grains
+let grainRandomness = 0.0; // Y-axis controlled randomness factor
+
+// Load predefined samples
+const samples = {
+    sine: "/static/audio/sinewave-sample.wav",
+    triangle: "/static/audio/triangle-sample.wav",
+    sawtooth: "/static/audio/sawtooth-sample.wav",
+    whitenoise: "/static/audio/whitenoise-sample.wav"
+};
+
+function loadSample(type) {
+    fetch(samples[type])
+        .then(response => response.arrayBuffer())
+        .then(data => audioContext.decodeAudioData(data))
+        .then(buffer => {
+            audioBuffer = buffer;
+            console.log(`${type} sample loaded.`);
+        })
+        .catch(error => console.error("Error loading sample:", error));
+}
+
+// Play a single grain
+function playGrain() {
+    if (!audioBuffer || !isPlaying) return;
+    
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+
+    // Calculate a randomized source position based on the spread
+    const randomSpread = (Math.random() - 0.5) * dashArraySpread;
+    let grainSourcePosition = baseSourcePosition + randomSpread;
+    grainSourcePosition = Math.max(0, grainSourcePosition % audioBuffer.duration);
+
+    source.playbackRate.value = playbackRate;
+
+    const gainNode = audioContext.createGain();
+    const now = audioContext.currentTime;
+
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(volume, now + grainSize * 0.1);
+    gainNode.gain.setValueAtTime(volume, now + grainSize * 0.9);
+    gainNode.gain.linearRampToValueAtTime(0, now + grainSize);
+
+    source.connect(gainNode).connect(audioContext.destination);
+
+    source.start(now, grainSourcePosition, grainSize);
+    source.stop(now + grainSize);
+
+    activeGrains.push(source);
+    setTimeout(() => activeGrains = activeGrains.filter(g => g !== source), grainSize * 1000);
+}
+
+// Stop all active grains
+function stopAllGrains() {
+    activeGrains.forEach(grain => grain.stop());
+    activeGrains = [];
+}
+
+// Handle Dot Movement in 2D Space
+const canvas = document.getElementById("granulatorCanvas");
+const ctx = canvas.getContext("2d");
+let dot = { x: canvas.width / 2, y: canvas.height / 2 };
+
+function drawDot() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.arc(dot.x, dot.y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "red";
+    ctx.fill();
+}
+
+canvas.addEventListener("mousedown", () => {
+    isPlaying = true;
+    startGranulation();
+});
+
+canvas.addEventListener("mouseup", () => {
+    isPlaying = false;
+    stopGranulation();
+    stopAllGrains();
+});
+
+canvas.addEventListener("mousemove", (event) => {
+    dot.x = event.offsetX;
+    dot.y = event.offsetY;
+    drawDot();
+});
+
+function startGranulation() {
+    if (granulationInterval) clearInterval(granulationInterval);
+    
+    granulationInterval = setInterval(() => {
+        if (!isPlaying) return;
+        
+        // X-axis: Controls grain size
+        grainSize = 0.03 + (dot.x / canvas.width) * 0.04; // 50ms to 350ms
+        
+        // Y-axis: Controls randomness in grain playback time
+        grainRandomness = (1 - dot.y / canvas.height) * 0.1; // Higher Y = Less random, Lower Y = More random
+        
+        // Schedule grains with random variations
+        let jitter = Math.random() * grainRandomness * 1000; // Jitter in milliseconds
+        setTimeout(playGrain, jitter);
+        
+    }, 1000 / grainDensity); // Controls grain scheduling rate
+}
+
+function stopGranulation() {
+    clearInterval(granulationInterval);
+}
+
+drawDot();
+
+// UI for sample selection
+document.getElementById("sineButton").addEventListener("click", () => loadSample("sine"));
+document.getElementById("triangleButton").addEventListener("click", () => loadSample("triangle"));
+document.getElementById("sawtoothButton").addEventListener("click", () => loadSample("sawtooth"));
+document.getElementById("whitenoiseButton").addEventListener("click", () => loadSample("whitenoise"));
+// UI for grain density slider
+document.getElementById("grainDensitySlider").addEventListener("input", (event) => {
+    grainDensity = parseInt(event.target.value);
+});
+
+
+</script> -->

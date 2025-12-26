@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Timbral Feature Plotting</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Upload an Audio File and Analyze Timbral Features</h1>
+    <form id="upload-form" action="/high_level_features_request" method="post" enctype="multipart/form-data">
+        <label for="wav_file">Select a WAV file:</label>
+        <input type="file" id="wav_file" name="wav_file" accept=".wav" required>
+        <br>
+        <button type="submit">Upload and Analyze</button>
+    </form>
+    <h2>Timbral Features Over Time</h2>
+    <audio id="audio-player" controls style="display: none;">
+        <source id="audio-source" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <div id="plot"></div>
+    <div id="radar-plot"></div>
+    <script>
+        let featureData;
+        const colorMap = {};
+
+        document.getElementById("upload-form").onsubmit = async function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const response = await fetch("/high_level_features_request", {
+                method: "POST",
+                body: formData
+            });
+            if (response.ok) {
+                featureData = await response.json();
+                assignColors(featureData);
+                renderPlot(featureData);
+                renderRadarPlot(featureData, 0);
+                // Load the audio file into the player
+                const audioFile = formData.get('wav_file');
+                const audioURL = URL.createObjectURL(audioFile);
+                document.getElementById('audio-source').src = audioURL;
+                const audioPlayer = document.getElementById('audio-player');
+                audioPlayer.style.display = 'block';
+                audioPlayer.load();
+                audioPlayer.addEventListener('timeupdate', () => updatePlot(audioPlayer.currentTime));
+            } else {
+                alert("Failed to analyze audio file.");
+            }
+        };
+
+        function assignColors(plotData) {
+            const colors = Plotly.d3.scale.category10().range();
+            let colorIndex = 0;
+            for (let feature in plotData) {
+                colorMap[feature] = colors[colorIndex % colors.length];
+                colorIndex++;
+            }
+        }
+
+        function renderPlot(plotData) {
+            var traces = [];
+            for (var feature in plotData) {
+                traces.push({
+                    x: plotData[feature].time_points,  // Time data for this feature
+                    y: plotData[feature].values,       // Feature values over time
+                    mode: 'lines',
+                    name: feature,
+                    line: { color: colorMap[feature], shape: 'spline' }
+                });
+            }
+            var layout = {
+                title: 'Timbral Features Over Time',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Feature Value' }
+            };
+            Plotly.newPlot('plot', traces, layout);
+        }
+
+        function renderRadarPlot(plotData, currentTime) {
+            let radarData = getRadarDataAtTime(plotData, currentTime);
+            let radarTrace = {
+                type: 'scatterpolar',
+                r: radarData.values,  // Feature values at the current time
+                theta: radarData.features,  // Feature names
+                fill: 'toself',
+                marker: { color: radarData.colors }
+            };
+            let layout = {
+                polar: {
+                    radialaxis: { visible: true, range: [0, 1] }
+                },
+                title: 'Timbral Features at Current Time'
+            };
+            Plotly.newPlot('radar-plot', [radarTrace], layout);
+        }
+
+        function updateRadarPlot(plotData, currentTime) {
+            let radarData = getRadarDataAtTime(plotData, currentTime);
+            Plotly.update('radar-plot', {
+                'r': [radarData.values],
+                'theta': [radarData.features],
+                'marker': { color: radarData.colors }
+            });
+        }
+
+        function updatePlot(currentTime) {
+            Plotly.relayout('plot', {
+                shapes: [{
+                    type: 'line',
+                    x0: currentTime,
+                    x1: currentTime,
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    line: {
+                        color: 'red',
+                        width: 2
+                    }
+                }]
+            });
+            updateRadarPlot(featureData, currentTime);
+        }
+
+        function getRadarDataAtTime(plotData, currentTime) {
+            let features = Object.keys(plotData);
+            let values = features.map(feature => {
+                let index = plotData[feature].time_points.findIndex(time => time >= currentTime);
+                return index !== -1 ? plotData[feature].values[index] : 0;
+            });
+            let colors = features.map(feature => colorMap[feature]);
+            return { features, values, colors };
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Soundsketcher</title>
+
+    <!-- Third Party Libraries for svg drag manipulation -->
+    <script src="https://cdn.jsdelivr.net/npm/svg-drag-select@0.4.2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.2/Draggable.min.js"></script>
+
+    
+
+    <!-- Third Party Libraries for slider creation -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.6.0/nouislider.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.6.0/nouislider.min.js"></script>
+
+    <!-- Third Party Libraries for special font usings -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/mixer.css">
+    <link rel="stylesheet" href="/static/css/sliders.css">
+    <link rel="stylesheet" href="/static/css/accordion.css">
+    
+    <!-- Third Party Library for Alert windows -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jssha/dist/sha256.js"></script>
+
+
+</head>
+<body>
+    {% include "header.html" %}
+    <div id="spinner" class="spinner" style="display: none;"></div>
+
+    <div id="svgWrapper" style="width: 100%; overflow-x: hidden;"></div>
+
+    <div id="tooltip" class="tooltip" style="display: none;"></div>
+
+    
+    <div id="visualization"></div>
+
+
+    <div id="drop_area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+        Drag & Drop WAV or multiple WAV files here to start Sketching
+        
+    </div>
+    <div id="bottomMenu" class="bottom-menu">
+        <button id="toggleMenuButton" class="toggle-menu-button">&#x25B2;</button>
+        <div class="menu-content">
+            <div class="left">
+                <div class="global-settings__header" style="display:none;">
+                    Sonificators<span class="question-mark" id="sonificatorsHelp">?</span>
+                </div>
+                <div class="granulator_container mixer_sonificator-container" style="display:none;">
+                    <div class="global-settings__header accordion-header">
+                        Granular-based Sonification
+                    </div>
+                    <div class="accordion-content">
+                        <div class="file-upload-container">
+                            <label for="audioFileInput" class="custom-file-upload">
+                                <i class="fa fa-upload"></i> Choose an Audio File
+                            </label>
+                            <input type="file" id="audioFileInput" accept="audio/*" />
+                        </div>
+                        
+                        <div id="granulationCanvas"></div>
+                        <div class="waveform-container">
+                            <canvas id="waveformCanvas" width="500" height="100"></canvas>
+                        </div>
+                        <button id="startGranulator" class="global-settings__button sonificators__play-button">Play Sketch with Granulator</button>
+                        <label for="grainSourcePositionSlider">Grain Source Position:</label>
+                        <input type="range" id="grainSourcePositionSlider" min="0" max="10" step="0.1" value="0">
+                    </div>
+                    
+                </div>
+                <div class="granulator_container mixer_sonificator-container" style="display:none;">
+                    <div class="global-settings__header accordion-header">
+                        Oscillator-based Sonification
+                    </div>
+                    <div class="accordion-content">
+                        <div class="waveform-select-container">
+                            <div class="waveform-selector">
+                                <button id="waveformPrev" class="arrow-button">▲</button>
+                                <div class="waveform-display">
+                                    <img id="waveformImage" src="static/assets/sine-wave.svg" alt="Sine Wave">
+                                </div>
+                                <button id="waveformNext" class="arrow-button">▼</button>
+                            </div>
+                        </div>
+                        <div class="button-container">
+                            <button id="toggleSynth" class="global-settings__button sonificators__play-button">Play Sketch with Oscillator</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- <div class="mixer-hyperContainer"></div> -->
+                <div id="controls" class="center" style="display: none;">
+                    <div class="global-settings__header">
+                        Mixer Controls
+                    </div>
+                    <div class="mixer-subcontainer">
+                        <div id="mixer">
+                        </div>
+                        <div id="show-hide-visualization"></div>
+                        <button id="playStopButton" onclick="togglePlayStop()" style="background: none; border: none; cursor: pointer;">
+                            <img id="playStopIcon" src="static/assets/play.png" alt="Play" style="width: 70px; height: 70px;">
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="selections__container right">
+
+                <div class="selections__feature2sketch-container">
+                    
+                        <div class="global-settings__header">
+                            Mapping Settings<span class="question-mark" id="mappindSettingsHelp">?</span>
+                        </div>
+                    <div class="selection-container">
+                        <!-- Column Titles -->
+                        <div class="selection-header">
+                            <div class="column feature-column">Audio Features<span class="question-mark" id="audioFeaturesHelp">?</span>
+                            </div>
+                            <div class="column characteristic-column">Sketch Characteristic</div>
+                            <div class="column checkbox-column">Invert Mapping</div>
+                            <div class="column slider-column">Min/Max</div>
+                        </div>
+
+                        <!-- HELP SECTION -->
+
+                        <!-- Pop-up Modal -->
+                        <div id="helpAudioFeatureModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close-button" id="closeAudioFeatureModal">&times;</span>
+                                <h2 class="modal-heading">Audio Features Explanation</h2>
+                                <ul class="modal-list">
+                                    <li><strong>Spectral Centroid:</strong> Indicates where the "center of mass" of the spectrum is located, often used to describe the "brightness" of a sound. Higher values represent more high-frequency content.</li>
+                                    <li><strong>F0-SC Combo:</strong> A combination of fundamental frequency (F0) and spectral centroid. It balances the pitch perception with the brightness of the sound.</li>
+                                    <li><strong>F0 | CREPE:</strong> Fundamental frequency estimation using the CREPE model, providing high precision for pitch tracking.</li>
+                                    <li><strong>Yin F0 | Librosa:</strong> A pitch detection algorithm implemented in Librosa. It estimates the fundamental frequency using the YIN algorithm.</li>
+                                    <li><strong>Yin F0 | Aubio:</strong> Similar to Librosa's implementation but uses the Aubio library for fundamental frequency detection.</li>
+                                    <li><strong>F0 | CREPE Confidence:</strong> Confidence level of the pitch estimation from the CREPE model. Higher values indicate more reliable pitch detection.</li>
+                                    <li><strong>Spectral Flux:</strong> Measures the rate of change in the power spectrum, indicating the onset of new frequencies or dynamics in the sound.</li>
+                                    <li><strong>Spectral Flatness:</strong> A measure of the noisiness or tonal quality of the sound. Higher values indicate more noise-like signals, while lower values are more tone-like.</li>
+                                    <li><strong>Spectral Bandwidth:</strong> The range of frequencies present in the signal, often used to describe the width of the spectral distribution.</li>
+                                    <li><strong>Zero Crossing Rate:</strong> Counts how often the signal changes sign (crosses the zero line), commonly associated with noisiness or percussiveness.</li>
+                                    <li><strong>Amplitude:</strong> Represents the loudness or energy level of the audio. Higher amplitudes correspond to louder sounds.</li>
+                                    <li><strong>Brightness:</strong> Describes how much high-frequency content exists in the sound, contributing to its sharpness and clarity.</li>
+                                    <li><strong>Sharpness:</strong> Indicates how harsh or cutting the sound feels, often associated with high frequencies.</li>
+                                    <li><strong>Loudness:</strong> A perceptual measure of sound intensity, taking into account the sensitivity of human hearing at different frequencies.</li>
+                                    <li><strong>Loudness-ZCR:</strong> A hybrid measure combining loudness and zero-crossing rate to capture both intensity and noisiness.</li>
+                                    <li><strong>None:</strong> Disables the mapping for this feature, leaving it unassigned.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Pop-up Modal -->
+                        <div id="helpMappingModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close-button" id="closeMappingModal">&times;</span>
+                                <h2 class="modal-heading">Mapping Settings Explanation</h2>
+                                <h3 class="modal-heading-h3">Functionality</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Inversion:</strong> Reverses the mapping, placing high values at the bottom of the canvas and low values at the top.</li>
+                                    <li><strong>Sliders:</strong> Control the minimum and maximum range of each mapped feature.</li>
+                                    <li><strong>Randomizer:</strong> Randomly assigns features to the available mapping slots for exploration.</li>
+                                    <li><strong>Reset:</strong> Resets all settings, including feature mappings, slider values, and inversion states.</li>
+                                </ul>
+                                <h3 class="modal-heading-h3">Hotkeys</h3>
+                                <ul class="modal-list">
+                                    <li><strong>C:</strong> Toggles the settings menu (e.g., fold/unfold).</li>
+                                    <li><strong>A:</strong> Trigger the randomizer functionality.</li>
+                                    <li><strong>S:</strong> Resketch the score.</li>
+                                    <li><strong>D:</strong> Resets all settings to their default states.</li>
+                                    <li><strong>Spacebar:</strong> Play the audio.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Pop-up Modal -->
+                        <div id="helpSonificatorsModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close-button" id="closeSonificatorsModal">&times;</span>
+                                <h2 class="modal-heading">Sonificators Explanation</h2>
+                                <h3 class="modal-heading-h3">Purpose</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Oscillator Sonification:</strong> Uses basic waveforms (sine, sawtooth, triangle, and square) to represent match sketch characteristics to oscillation parameters.</li>
+                                    <li><strong>Granulator Sonification:</strong> Explores sound texture and temporal aspects by segmenting and playing grains of audio.</li>
+                                </ul>
+                                <h3 class="modal-heading-h3">Functionality</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Waveform Selector:</strong> Allows you to toggle between waveforms for oscillator sonification. Pitch, volume, and other parameters are defined by line characteristics.</li>
+                                    <li><strong>Granulation:</strong> Parameters like grain size, spread, and playback speed are defined by the line characteristics.</li>
+                                    <li><strong>Play/Stop Toggle:</strong> Simple button to start or stop the playback.</li>
+                                </ul>
+                                <h3 class="modal-heading-h3">Limitations</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Development Stage:</strong> These tools are under active research and development, so their performance may vary.</li>
+                                    <li><strong>Experimental Nature:</strong> Designed for exploration and not optimized for high-performance audio synthesis yet.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+
+                        <!-- Pop-up Modal for Clamp Feature Selection -->
+                        <div id="clampFeatureModal" class="modal">
+                            <div class="modal-content">
+                            <span class="close-button" id="closeClampFeatureModal">&times;</span>
+                            <h2 class="modal-heading">Feature Clamping Control</h2>
+                            <p class="modal-description">Select which features you want to clamp. Unselected features will use raw values without robust min/max limits.</p>
+                        
+                            <!-- Multi-select element inside the modal -->
+                            <label for="clamp-feature-select" style="display:block; margin-top: 1em;">Select Features to Clamp:</label>
+                            <select id="clamp-feature-select" multiple style="width: 100%; height: 250px;">
+                        
+                                <!-- Example options: adjust to match your full list -->
+                                 <!-- //! Disabled old features -->
+                                <!-- <option value="amplitude" selected>amplitude</option>
+                                <option value="zerocrossingrate" selected>zerocrossingrate</option>
+                                <option value="calibrated_zerocrossingrate">calibrated_zerocrossingrate</option> -->
+                                <option value="spectral_centroid">spectral_centroid</option>
+                                <!-- <option value="spectral_flux" selected>spectral_flux</option>
+                                <option value="spectral_bandwidth">spectral_bandwidth</option>
+                                <option value="spectral_flatness">spectral_flatness</option>
+                                <option value="yin_f0_librosa">yin_f0_librosa</option>
+                                <option value="yin_f0_aubio">yin_f0_aubio</option> -->
+                                <option value="crepe_f0">crepe_f0</option>
+                                <option value="crepe_confidence">crepe_confidence</option>
+                                <option value="yin_periodicity">yin_periodicity</option>
+                                <!-- <option value="spectral_deviation">spectral_deviation</option> -->
+                                <!-- <option value="brightness">brightness</option> -->
+                                <option value="sharpness">sharpness</option>
+                                <option value="loudness">loudness</option>
+                                <option value="mir_mps_roughness">mir_mps_roughness</option>
+                                <!-- <option value="mir_roughness_zwicker">mir_roughness_zwicker</option> -->
+                                <option value="mir_sharpness_zwicker">mir_sharpness_zwicker</option>
+                                <option value="mir_roughness_vassilakis">mir_roughness_vassilakis</option>
+                                <!-- <option value="mir_roughness_sethares">mir_roughness_sethares</option> -->
+                                <option value="weighted_spectral_centroid">weighted_spectral_centroid</option>
+                                <!-- <option value="perceived_pitch">perceived_pitch</option>
+                                <option value="perceived_pitch_librosa">perceived_pitch_librosa</option>
+                                <option value="perceived_pitch_librosa_periodicity">perceived_pitch_librosa_periodicity</option>
+                                <option value="perceived_pitch_crepe_periodicity">perceived_pitch_crepe_periodicity</option> -->
+                                <!-- <option value="perceived_pitch_f0_or_SC">perceived_pitch_f0_or_SC</option> -->
+                                <option value="perceived_pitch_f0_or_SC_weighted">perceived_pitch_f0_or_SC_weighted</option>
+                                <!-- <option value="perceived_pitch_f0_candidates_periodicity">perceived_pitch_f0_candidates_periodicity</option> -->
+                                <!-- <option value="loudness_zcr">loudness_zcr</option> -->
+                                <option value="loudness_periodicity" selected>loudness_periodicity</option>
+                                <option value="loudness_pitchConf">loudness_pitchConf</option>
+                        
+                            </select>
+                        
+                            <p style="margin-top: 1em; font-size: 0.9em; color: #555;">
+                                Your changes will take effect immediately when you apply them in your sketch.
+                            </p>
+                            </div>
+                        </div>
+  
+                        <!-- //! Disabled old features -->
+                        <!-- Feature Selection Rows -->
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-1" class="featureSelect">
+
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <!-- <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        <option value="yin_f0_aubio">Yin F0 | Aubio</option>
+                                        <option value="f0_candidates">F0 Candidates</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        <!-- <option value="perceived_pitch">F0-SC | CREPE(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_librosa">F0-SC | Librosa(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_crepe_periodicity">F0-SC | CREPE(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_librosa_periodicity">F0-SC | Librosa(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_candidates_periodicity">F0-SC | Candidates(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_or_SC">F0 Or SC | CREPE - Periodicity</option> -->
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        <!-- <option value="centroid_peak_bandwidth">Peak Centroid Bandwidth</option>
+                                        <option value="centroid_peak_bandwidth_prominence">Peak Centroid Bandwidth Prominence</option> -->
+                                      </optgroup>
+
+                                      <!-- <optgroup label="🌈 Spectral Features">
+                                        <option value="spectral_flux">Spectral Flux</option>
+                                        <option value="spectral_flatness">Spectral Flatness</option>
+                                        <option value="spectral_bandwidth" >Spectral Bandwidth</option>
+                                      </optgroup> -->
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity" selected>Loudness-Periodicity</option>
+                                        <!-- <option value="loudness_zcr">Loudness-ZCR</option> -->
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        <!-- <option value="amplitude">Amplitude</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        <!-- <option value="brightness">Brightness</option> -->
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        <!-- <option value="mir_roughness_zwicker">MIR: Roughness | Zwicker</option> -->
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        <!-- <option value="mir_roughness_sethares">MIR: Roughness | Sethares</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        <!-- <option value="zerocrossingrate">Zero Crossing Rate</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                   
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-line-length" class="svg-characteristic">Line Length</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-1" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-1" class="range-slider"></div>
+                                <!-- <div class="slider-labels">
+                                    <span id="sliderMinLabel-1">0</span>
+                                    <span id="sliderMaxLabel-1">1</span>
+                                </div> -->
+                            </div>
+                            <!-- <div class="knob-container">
+                                <label for="scaleKnob">Compression Scale:</label>
+                                <div id="scaleKnob"></div>
+                                <span id="scaleValue">5</span>
+                            </div> -->
+                        </div>
+                        <!-- Repeat for other feature selections -->
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-2" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <!-- <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        <option value="yin_f0_aubio">Yin F0 | Aubio</option>
+                                        <option value="f0_candidates">F0 Candidates</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        <!-- <option value="perceived_pitch">F0-SC | CREPE(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_librosa">F0-SC | Librosa(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_crepe_periodicity">F0-SC | CREPE(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_librosa_periodicity">F0-SC | Librosa(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_candidates_periodicity">F0-SC | Candidates(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_or_SC">F0 Or SC | CREPE - Periodicity</option> -->
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        <!-- <option value="centroid_peak_bandwidth">Peak Centroid Bandwidth</option>
+                                        <option value="centroid_peak_bandwidth_prominence">Peak Centroid Bandwidth Prominence</option> -->
+                                      </optgroup>
+
+                                      <!-- <optgroup label="🌈 Spectral Features">
+                                        <option value="spectral_flux">Spectral Flux</option>
+                                        <option value="spectral_flatness">Spectral Flatness</option>
+                                        <option value="spectral_bandwidth">Spectral Bandwidth</option>
+                                      </optgroup> -->
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity" selected>Loudness-Periodicity</option>
+                                        <!-- <option value="loudness_zcr">Loudness-ZCR</option> -->
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        <!-- <option value="amplitude">Amplitude</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        <!-- <option value="brightness">Brightness</option> -->
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        <!-- <option value="mir_roughness_zwicker">MIR: Roughness | Zwicker</option> -->
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        <!-- <option value="mir_roughness_sethares">MIR: Roughness | Sethares</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        <!-- <option value="zerocrossingrate">Zero Crossing Rate</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-line-width" class="svg-characteristic">Line Width</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-2" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-2" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-3" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <!-- <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        <option value="yin_f0_aubio">Yin F0 | Aubio</option>
+                                        <option value="f0_candidates">F0 Candidates</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        <!-- <option value="perceived_pitch">F0-SC | CREPE(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_librosa">F0-SC | Librosa(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_crepe_periodicity">F0-SC | CREPE(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_librosa_periodicity">F0-SC | Librosa(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_candidates_periodicity">F0-SC | Candidates(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_or_SC">F0 Or SC | CREPE - Periodicity</option> -->
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        <!-- <option value="centroid_peak_bandwidth">Peak Centroid Bandwidth</option>
+                                        <option value="centroid_peak_bandwidth_prominence">Peak Centroid Bandwidth Prominence</option> -->
+                                      </optgroup>
+
+                                      <!-- <optgroup label="🌈 Spectral Features">
+                                        <option value="spectral_flux">Spectral Flux</option>
+                                        <option value="spectral_flatness">Spectral Flatness</option>
+                                        <option value="spectral_bandwidth">Spectral Bandwidth</option>
+                                      </optgroup> -->
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        <!-- <option value="loudness_zcr">Loudness-ZCR</option> -->
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        <!-- <option value="amplitude">Amplitude</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        <!-- <option value="brightness">Brightness</option> -->
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        <!-- <option value="mir_roughness_zwicker">MIR: Roughness | Zwicker</option> -->
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        <!-- <option value="mir_roughness_sethares">MIR: Roughness | Sethares</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity" selected>Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        <!-- <option value="zerocrossingrate">Zero Crossing Rate</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div class="svg-characteristic">Color Saturation</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-3" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-3" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-6" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <!-- <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        <option value="yin_f0_aubio">Yin F0 | Aubio</option>
+                                        <option value="f0_candidates">F0 Candidates</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        <!-- <option value="perceived_pitch">F0-SC | CREPE(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_librosa">F0-SC | Librosa(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_crepe_periodicity">F0-SC | CREPE(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_librosa_periodicity">F0-SC | Librosa(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_candidates_periodicity">F0-SC | Candidates(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_or_SC">F0 Or SC | CREPE - Periodicity</option> -->
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        <!-- <option value="centroid_peak_bandwidth">Peak Centroid Bandwidth</option>
+                                        <option value="centroid_peak_bandwidth_prominence">Peak Centroid Bandwidth Prominence</option> -->
+                                      </optgroup>
+
+                                      <!-- <optgroup label="🌈 Spectral Features">
+                                        <option value="spectral_flux">Spectral Flux</option>
+                                        <option value="spectral_flatness">Spectral Flatness</option>
+                                        <option value="spectral_bandwidth">Spectral Bandwidth</option>
+                                      </optgroup> -->
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness" selected>Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        <!-- <option value="loudness_zcr">Loudness-ZCR</option> -->
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        <!-- <option value="amplitude">Amplitude</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        <!-- <option value="brightness">Brightness</option> -->
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        <!-- <option value="mir_roughness_zwicker">MIR: Roughness | Zwicker</option> -->
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        <!-- <option value="mir_roughness_sethares">MIR: Roughness | Sethares</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        <!-- <option value="zerocrossingrate">Zero Crossing Rate</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div class="svg-characteristic">Color Lightness</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-6" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-6" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-4" class="featureSelect">
+                                    <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <!-- <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        <option value="yin_f0_aubio">Yin F0 | Aubio</option>
+                                        <option value="f0_candidates">F0 Candidates</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        <!-- <option value="perceived_pitch">F0-SC | CREPE(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_librosa">F0-SC | Librosa(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_crepe_periodicity">F0-SC | CREPE(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_librosa_periodicity">F0-SC | Librosa(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_candidates_periodicity">F0-SC | Candidates(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_or_SC">F0 Or SC | CREPE - Periodicity</option> -->
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        <!-- <option value="centroid_peak_bandwidth">Peak Centroid Bandwidth</option>
+                                        <option value="centroid_peak_bandwidth_prominence">Peak Centroid Bandwidth Prominence</option> -->
+                                      </optgroup>
+
+                                      <!-- <optgroup label="🌈 Spectral Features">
+                                        <option value="spectral_flux">Spectral Flux</option>
+                                        <option value="spectral_flatness">Spectral Flatness</option>
+                                        <option value="spectral_bandwidth">Spectral Bandwidth</option>
+                                      </optgroup> -->
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        <!-- <option value="loudness_zcr">Loudness-ZCR</option> -->
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        <!-- <option value="amplitude">Amplitude</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        <!-- <option value="brightness">Brightness</option> -->
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        <!-- <option value="mir_roughness_zwicker">MIR: Roughness | Zwicker</option> -->
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        <!-- <option value="mir_roughness_sethares">MIR: Roughness | Sethares</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity" selected>Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        <!-- <option value="zerocrossingrate">Zero Crossing Rate</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none" >None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-angle" class="svg-characteristic">Angle</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" checked id="invertMapping-4" checked class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-4" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-5" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid" selected>Weighted Spectral Centroid</option>
+                                        <!-- <option value="multipeak_centroid">Multipeak Centroid</option>   
+                                        <option value="weighted_spectral_centroid_bandwidth">Centroid | Bandwidth</option>
+                                        <option value="spectral_peak">Spectral Peak</option>
+                                        <option value="spectral_peak_prominence_db">Spectral Peak Prominence DB</option>
+                                        <option value="spectral_peak_prominence_norm">Spectral Peak Prominence NORM</option> -->
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <!-- <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        <option value="yin_f0_aubio">Yin F0 | Aubio</option>
+                                        <option value="f0_candidates">F0 Candidates</option> -->
+                                      </optgroup>
+                                    
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        <!-- <option value="perceived_pitch">F0-SC | CREPE(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_librosa">F0-SC | Librosa(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_crepe_periodicity">F0-SC | CREPE(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_librosa_periodicity">F0-SC | Librosa(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_candidates_periodicity">F0-SC | Candidates(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_or_SC">F0 Or SC | CREPE - Periodicity</option> -->
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        <!-- <option value="centroid_peak_bandwidth">Peak Centroid Bandwidth</option>
+                                        <option value="centroid_peak_bandwidth_prominence">Peak Centroid Bandwidth Prominence</option> -->
+                                      </optgroup>
+                                    
+                                      <!-- <optgroup label="🌈 Spectral Features">
+                                        <option value="spectral_flux">Spectral Flux</option>
+                                        <option value="spectral_flatness">Spectral Flatness</option>
+                                        <option value="spectral_bandwidth">Spectral Bandwidth</option>
+                                      </optgroup> -->
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        <!-- <option value="loudness_zcr">Loudness-ZCR</option> -->
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        <!-- <option value="amplitude">Amplitude</option> -->
+                                      </optgroup>
+                                    
+                                      <optgroup label="💡 Timbre Features">
+                                        <!-- <option value="brightness">Brightness</option> -->
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        <!-- <option value="mir_roughness_zwicker">MIR: Roughness | Zwicker</option> -->
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        <!-- <option value="mir_roughness_sethares">MIR: Roughness | Sethares</option> -->
+                                      </optgroup>
+                                    
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        <!-- <option value="zerocrossingrate">Zero Crossing Rate</option> -->
+                                      </optgroup>
+                                    
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div class="svg-characteristic">Y Axis</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-5" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-5" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-7" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <!-- <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        <option value="yin_f0_aubio">Yin F0 | Aubio</option>
+                                        <option value="f0_candidates">F0 Candidates</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        <!-- <option value="perceived_pitch">F0-SC | CREPE(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_librosa">F0-SC | Librosa(F0) - CREPE CONF</option>
+                                        <option value="perceived_pitch_crepe_periodicity">F0-SC | CREPE(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_librosa_periodicity">F0-SC | Librosa(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_candidates_periodicity">F0-SC | Candidates(F0) - Periodicity</option>
+                                        <option value="perceived_pitch_f0_or_SC">F0 Or SC | CREPE - Periodicity</option> -->
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        <!-- <option value="centroid_peak_bandwidth">Peak Centroid Bandwidth</option>
+                                        <option value="centroid_peak_bandwidth_prominence">Peak Centroid Bandwidth Prominence</option> -->
+                                      </optgroup>
+
+                                      <!-- <optgroup label="🌈 Spectral Features">
+                                        <option value="spectral_flux">Spectral Flux</option>
+                                        <option value="spectral_flatness">Spectral Flatness</option>
+                                        <option value="spectral_bandwidth">Spectral Bandwidth</option>
+                                      </optgroup> -->
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        <!-- <option value="loudness_zcr">Loudness-ZCR</option> -->
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        <!-- <option value="amplitude">Amplitude</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        <!-- <option value="brightness">Brightness</option> -->
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        <!-- <option value="mir_roughness_zwicker">MIR: Roughness | Zwicker</option> -->
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis" selected>MIR: Roughness | Vassilakis</option>
+                                        <!-- <option value="mir_roughness_sethares">MIR: Roughness | Sethares</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        <!-- <option value="zerocrossingrate">Zero Crossing Rate</option> -->
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-dash-array" class="svg-characteristic">Dash Array</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-7" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-7" class="range-slider"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="selection__submit-container">
+                            <!-- Submit button -->
+                            <button id="submitButton" class="global-settings__button">Resketch</button>
+
+                            <button id="randomizeFeaturesButton" class="global-settings__button">Randomize Features</button>
+
+                            <button id="resetButton" class="global-settings__button reset-button">Reset All</button>
+
+                            <button id="presetButton" class="global-settings__button preset-button">Preset 1</button>
+                        </div>
+                        <!-- <div class="selection__container">
+                            <button id="changeNamesButton">Change Option Names</button>
+                        </div>
+                        <div class="selection__container">
+                            <label>
+                                <input type="checkbox" id="log-linear" class="invertMappingCheckbox">
+                            </label>
+                        </div> -->
+                    </div>
+                </div>
+
+                <div class="global-settings__container">
+                    <div class="global-settings__header">
+                        Data Settings
+                    </div>
+                    <div class="global-settings__content">
+                        <!-- Change Names Button -->
+                        <!-- <div class="global-settings__item">
+                            <button id="changeNamesButton" class="global-settings__button"></button>
+                        </div> -->
+                        <!-- Clamp Toggle -->
+                        <div class="global-settings__item" style="justify-content: center;">
+                            <div class="global-data-settings" >
+                                <label class="global-settings__label">
+                                    <input type="checkbox" id="toggleClamp" class="invertMappingCheckbox" checked>
+                                    Clamp 
+                                </label>
+                                <!-- ✅ The new button to open the modal -->
+                                <button id="openClampFeatureModal" class="global-settings__button" style="margin-top: 1em; margin-bottom: 1em;">
+                                    Configure Features
+                                </button>
+                                <div class="column range-slider-column" style="width: 90%; ">
+                                    <div id="slider-softclip" class="range-slider"></div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                <input type="checkbox" id="toggleSoftclip" class="invertMappingCheckbox">
+                                Apply Soft Clipping
+                            </label>
+                        </div>
+
+                        <!-- //! Normalize audio button -->
+                        <div class="global-settings__item">
+                            <label class="global-settings__label" for="normalize_button">
+                                <input type="checkbox" id="normalize_button" class="invertMappingCheckbox"> Normalize Audio
+                            </label>
+                        </div>
+
+                        <!-- //! Window Length / Overlap -->
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                Window Length:
+                                <select id="window_length_selector">
+                                    <option value="32">32</option>
+                                    <option value="64">64</option>
+                                    <option value="128">128</option>
+                                    <option value="256">256</option>
+                                    <option value="512">512</option>
+                                    <option value="1024">1024</option>
+                                    <option value="2048" selected>2048</option>
+                                    <option value="4096">4096</option>
+                                    <option value="8192">8192</option>
+                                    <option value="16384">16384</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                Window Overlap:
+                                <select id="window_overlap_selector">
+                                    <option value="0.0%">0.0%</option>
+                                    <option value="20.0%">20.0%</option>
+                                    <option value="25.0%">25.0%</option>
+                                    <option value="33.3%">33.3%</option>
+                                    <option value="40.0%">40.0%</option>
+                                    <option value="50.0%" selected>50.0%</option>
+                                    <option value="60.0%">60.0%</option>
+                                    <option value="66.6%">66.6%</option>
+                                    <option value="75.0%">75.0%</option>
+                                    <option value="80.0%">80.0%</option>
+                                </select>
+                            </label>
+                        </div>
+                        
+                        <!-- //! Recalculate Button -->
+                        <button id="recalculate_button" class="global-settings__button">Recalculate</button>
+
+                    </div>
+                </div>
+
+
+                <div class="global-settings__container">
+                    <div class="global-settings__header">
+                        Global Settings
+                    </div>
+                    <div class="global-settings__content">
+                        <!-- Change Names Button -->
+                        <!-- <div class="global-settings__item">
+                            <button id="changeNamesButton" class="global-settings__button"></button>
+                        </div> -->
+
+                        <!-- //! Automatic resketch button -->
+                        <div class="global-settings__item">
+                            <label class="global-settings__label" for="auto_resketch_button">
+                                <input type="checkbox" checked id="auto_resketch_button" class="global-settings__checkbox"> Automatic Resketch
+                            </label>
+                        </div>
+
+                        <!-- //! Changed from log/linear -->
+                        <!-- Linear/Log Scale Toggle -->
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                <input type="checkbox" checked id="log-linear" class="global-settings__checkbox">
+                                Linear/Log Scale
+                            </label>
+                        </div>
+                        <div class="global-settings__item">
+                            <label class="global-settings__label" for="scrollModeToggle">
+                                <input type="checkbox" id="scrollModeToggle" class="global-settings__checkbox"> Scrollable Zoom Mode
+                            </label>
+                        </div>
+
+                        <!-- //! Merged line sketching & polygon mode -->
+                        <!-- Line/Polygon Mode -->
+                        <div class="global-settings__item">
+                            <label class="global-settings__label" for="linePolygonMode">
+                                <input type="checkbox" id="linePolygonMode" class="global-settings__checkbox">
+                                Line/Polygon Mode
+                            </label>
+                        </div>
+                        <!-- Enable Line Sketching -->
+                        <!-- <div class="global-settings__item">
+                            <label class="global-settings__label" for="lineSketchingToggle">
+                                <input type="checkbox" checked id="lineSketchingToggle" class="global-settings__checkbox">
+                                Enable Line Sketching
+                            </label>
+                        </div> -->
+                        <!-- Enable Polygon Mode -->
+                        <!-- <div class="global-settings__item">
+                            <label class="global-settings__label" for="polygonToggle">
+                                <input type="checkbox" id="polygonToggle" class="global-settings__checkbox">
+                                Enable Polygon Mode
+                            </label>
+                        </div> -->
+
+                        <!-- //! Temporarily disabling objectifier -->
+                        <!-- Objectify -->
+                        <!-- <div class="global-settings__item">
+                            <label class="global-settings__label" for="objectifyToggle">
+                                <input type="checkbox" id="objectifyToggle" class="global-settings__checkbox">
+                                Objectify
+                            </label>
+                        </div> -->
+                        <!-- Draw Circles on Line Centers -->
+                        <div class="global-settings__item">
+                            <label class="global-settings__label" for="thresholdCircle">
+                                <input type="checkbox" id="thresholdCircle" class="global-settings__checkbox">
+                                Draw Circles
+                            </label>
+                        </div>
+                        <!-- //! Renamed this -->
+                        <!-- Join Data Points -->
+                        <div class="global-settings__item">
+                            <label class="global-settings__label" for="joindatapoints">
+                                <input type="checkbox" id="joindatapoints" class="global-settings__checkbox">
+                                Join Data Points 
+                            </label>
+                        </div>
+                        <!-- //! Disabling this -->
+                        <!-- Choose Base Hue -->
+                        <!-- <div class="global-settings__item">
+                            <input type="color" id="huePicker" value="#ff0000" class="global-settings__colorpicker">
+                            <label class="global-settings__label" for="huePicker">
+                                Choose a Base Hue:
+                            </label>
+                        </div> -->
+                        <div class="global-settings__item">
+                            <button id="exportButton" class="global-settings__button">Export Image</button>
+                        </div>
+                        <div class="global-settings__item">
+                            <button id="exportFeaturesButton" class="global-settings__button">Export JSON</button>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div class="selection__container selection__container__noise-threshold" style="display: none;">
+                    <label for="thresholdToggle">Draw Lines Above Noise Threshold:</label>
+                    <input type="checkbox" id="thresholdToggle">
+                    <label for="thresholdSlider">Zero Crossing Rate Threshold:</label>
+                    <input type="range" id="thresholdSlider" min="0" max="45" step="1" value="40">    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/collapsibleMenu.js"></script>
+    <script src="static/js/changeNamesButton.js"></script>
+
+    <script>
+        
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        let audioDuration = 0;
+        let globalAudioData; // Declare a global variable to store the JSON data
+        let globalFile; // Declare a global variable to store the audio file
+        let clickedPosition = 0; // Default to the start of the audio
+        // JavaScript
+        // Get references to the dropdown menus
+        const featureSelect1 = document.getElementById('featureSelect-1');
+        const featureSelect2 = document.getElementById('featureSelect-2');
+        const featureSelect3 = document.getElementById('featureSelect-3');
+        const featureSelect4 = document.getElementById('featureSelect-4');
+        const featureSelect5 = document.getElementById('featureSelect-5');
+        const featureSelect6 = document.getElementById('featureSelect-6');
+        const featureSelect7 = document.getElementById('featureSelect-7');
+        const thresholdToggle = document.getElementById("thresholdToggle");
+        const thresholdSlider = document.getElementById("thresholdSlider"); 
+        const thresholdCircle = document.getElementById("thresholdCircle"); 
+        const joinDataPoints = document.getElementById("joindatapoints");
+
+        //! Merged line sketching & polygon mode
+        const linePolygonMode = document.getElementById("linePolygonMode");
+        // const polygonToggle = document.getElementById("polygonToggle");
+        // const lineSketchingToggle = document.getElementById("lineSketchingToggle")
+
+        // Get reference to the submit button
+        const submitButton = document.getElementById('submitButton');
+
+        //! Disabling this
+        // const huePicker = document.getElementById('huePicker');
+
+        </script>
+            <script src="static/js/submitButton.js"></script>
+            <script src="static/js/tooltip.js"></script>
+            <script src="static/js/auxiliaryFunctions.js"></script>
+            <script src="static/js/featureProcessors.js"></script>
+            <script src="static/js/drawVisualisation.js"></script>
+            <script src="static/js/handleDropAudios.js"></script>
+            <script src="static/js/mixerConstructor.js"></script>
+            <script src="static/js/playStopMainAudioFunctions.js"></script>
+            <script src="static/js/exportButtons.js"></script>
+            <script src="static/js/helpButtons.js"></script>
+        <script>
+
+        // Get the checkbox element
+        const logLinearCheckbox = document.getElementById("log-linear");
+
+        // Dropdown and allowed features (example)
+        const featureSelect = document.getElementById("featureSelect-5"); // Example dropdown
+        const allowedLogFeatures = ["spectral_centroid", "weighted_spectral_centroid", "weighted_spectral_centroid_bandwidth", "spectral_peak", "centroid_peak_bandwidth", "centroid_peak_bandwidth_prominence", "multipeak_centroid", "yin_f0_librosa", "yin_f0_aubio", "crepe_f0", "perceived_pitch", "perceived_pitch_librosa", "perceived_pitch_crepe_periodicity", "perceived_pitch_librosa_periodicity", "perceived_pitch_f0_candidates_periodicity", "perceived_pitch_f0_or_SC", "perceived_pitch_f0_or_SC_weighted"]; // Example features
+
+        // Function to update the checkbox state
+        function updateLogLinearCheckbox() {
+            if (allowedLogFeatures.includes(featureSelect.value)) {
+                logLinearCheckbox.disabled = false; // Enable checkbox
+            } else {
+                logLinearCheckbox.disabled = true; // Disable checkbox
+                logLinearCheckbox.checked = false; // Reset checkbox if disabled
+            }
+        }
+
+        // Attach event listener to the dropdown
+        featureSelect.addEventListener("change", updateLogLinearCheckbox);
+
+        // Initialize checkbox state on page load
+        updateLogLinearCheckbox();
+  
+        </script>
+            <script src="static/js/sliderFunctions.js"></script>
+            <script src="static/js/resetButton.js"></script>
+            <script src="static/js/presetButton.js"></script>
+            <script src="static/js/recalculateButton.js"></script>
+            <script src="static/js/autoResketch.js"></script>
+        <script>
+        
+        const svgCharacteristicLabel1 = document.getElementById("svg-characteristic-label-line-length");
+        const svgCharacteristicLabel2 = document.getElementById("svg-characteristic-label-line-width");
+        const svgCharacteristicLabel4 = document.getElementById("svg-characteristic-label-angle");
+        const svgCharacteristicLabel7 = document.getElementById("svg-characteristic-label-dash-array");
+
+        //const featureSelect = document.getElementById("featureSelect-7");
+        const invertMappingCheckbox7 = document.getElementById("invertMapping-7");
+        const invertMappingCheckbox4 = document.getElementById("invertMapping-4");
+        const slider7 = document.getElementById("slider-7");
+        const slider4 = document.getElementById("slider-4");
+        const slider1 = document.getElementById("slider-1");
+        const slider2 = document.getElementById("slider-2");
+
+        //! Added this
+        let isPolygonActive = false;
+        linePolygonMode.addEventListener("change",() =>
+        {
+            isPolygonActive = !isPolygonActive;
+            thresholdCircle.disabled = isPolygonActive;
+            if(thresholdCircle.checked)
+            {
+                thresholdCircle.checked = !isPolygonActive;
+            }
+            joinDataPoints.disabled = isPolygonActive;
+            if(joinDataPoints.checked)
+            {
+                joinDataPoints.checked = !isPolygonActive;
+            }
+
+            //! Added old logic below (changed slider values to match sliderFunctions.js defaults)
+
+            // Enable or disable the elements based on the state
+            featureSelect7.disabled = isPolygonActive;
+            featureSelect4.disabled = isPolygonActive;
+            invertMappingCheckbox7.disabled = isPolygonActive;
+            invertMappingCheckbox4.disabled = isPolygonActive;
+
+            // You can add custom logic to disable a slider if it's implemented with a library
+            // If the slider has an input element, disable it like this:
+            if(slider7)
+            {
+                slider7.classList.toggle("disabled-slider", isPolygonActive);
+                // Optionally, if the slider has an input element:
+                const sliderInput7 = slider7.querySelector("input");
+                if(sliderInput7)
+                {
+                    sliderInput7.disabled = isPolygonActive;
+                }
+                slider4.classList.toggle("disabled-slider", isPolygonActive);
+                // Optionally, if the slider has an input element:
+                const sliderInput4 = slider4.querySelector("input");
+                if(sliderInput4)
+                {
+                    sliderInput4.disabled = isPolygonActive;
+                }
+            }
+            svgCharacteristicLabel7.classList.toggle("inactive", isPolygonActive);
+            svgCharacteristicLabel4.classList.toggle("inactive", isPolygonActive);
+            
+            // Toggle line-through styling for the SVG characteristic label
+            if(isPolygonActive)
+            {
+                svgCharacteristicLabel1.innerText = "Corners";
+                svgCharacteristicLabel2.innerText = "Radius";
+            }
+            else
+            {
+                svgCharacteristicLabel1.innerText = "Line Length";
+                svgCharacteristicLabel2.innerText = "Line Width";
+            }
+
+            // Update the min and max of the first slider
+            if(slider1 && slider1.noUiSlider)
+            {
+                const newMin = isPolygonActive ? 3 : 0; // Min value when polygons are active/inactive
+                const newMax = isPolygonActive ? 12 : 150; // Max value when polygons are active/inactive
+
+                slider1.noUiSlider.updateOptions(
+                {
+                    range:
+                    {
+                        min: newMin,
+                        max: newMax
+                    },
+                    start: [newMin, newMax] // Reset the range to match the new limits
+                },false); //! Added false to not trigger resketch multiple times
+
+                console.log(`Slider-1 updated: min=${newMin}, max=${newMax}`);
+            }
+
+            // Update the min and max of the first slider
+            if(slider2 && slider2.noUiSlider)
+            {
+                const newMin = isPolygonActive ? 3 : 0; // Min value when polygons are active/inactive
+                const newMax = isPolygonActive ? 20 : 15; // Max value when polygons are active/inactive
+
+                slider2.noUiSlider.updateOptions(
+                {
+                    range:
+                    {
+                        min: newMin,
+                        max: newMax
+                    },
+                    start: [newMin, newMax] // Reset the range to match the new limits
+                },false); //! Added false to not trigger resketch multiple times
+
+                console.log(`Slider-1 updated: min=${newMin}, max=${newMax}`);
+            }
+        });
+
+        // // Initialize the toggle state
+        // const polygonToggleButton = document.getElementById("polygonToggle");
+        // let isPolygonActive = true;
+        // // Add an event listener to the button
+        // polygonToggleButton.addEventListener("click", function ()
+        // {
+        //     // Toggle the state
+        //     isPolygonActive = !isPolygonActive;
+
+        //     // Enable or disable the elements based on the state
+        //     featureSelect7.disabled = !isPolygonActive;
+        //     featureSelect4.disabled = !isPolygonActive;
+        //     invertMappingCheckbox7.disabled = !isPolygonActive;
+        //     invertMappingCheckbox4.disabled = !isPolygonActive;
+
+        //     // You can add custom logic to disable a slider if it's implemented with a library
+        //     // If the slider has an input element, disable it like this:
+        //     if (slider7) {
+        //         slider7.classList.toggle("disabled-slider", !isPolygonActive);
+        //         // Optionally, if the slider has an input element:
+        //         const sliderInput7 = slider7.querySelector("input");
+        //         if (sliderInput7) {
+        //             sliderInput7.disabled = !isPolygonActive;
+        //         }
+        //         slider4.classList.toggle("disabled-slider", !isPolygonActive);
+        //         // Optionally, if the slider has an input element:
+        //         const sliderInput4 = slider4.querySelector("input");
+        //         if (sliderInput4) {
+        //             sliderInput4.disabled = !isPolygonActive;
+        //         }
+        //     }
+        //     svgCharacteristicLabel7.classList.toggle("inactive", !isPolygonActive);
+        //     svgCharacteristicLabel4.classList.toggle("inactive", !isPolygonActive);
+            
+        //     // Toggle line-through styling for the SVG characteristic label
+        //     if (!isPolygonActive) {
+        //         svgCharacteristicLabel1.innerText = "Number of Corners";
+        //         svgCharacteristicLabel2.innerText = "Radius";
+        //     } else {
+        //         svgCharacteristicLabel1.innerText = "Line Length";
+        //         svgCharacteristicLabel2.innerText = "Line Width";
+        //     }
+
+
+        //     // Update the min and max of the first slider
+        //     if (slider1 && slider1.noUiSlider) {
+        //         const newMin = isPolygonActive ? 0 : 3; // Min value when polygons are active/inactive
+        //         const newMax = isPolygonActive ? 100 : 12; // Max value when polygons are active/inactive
+
+        //         slider1.noUiSlider.updateOptions({
+        //             range: {
+        //                 min: newMin,
+        //                 max: newMax
+        //             },
+        //             start: [newMin, newMax] // Reset the range to match the new limits
+        //         },false); //! Added false to not trigger resketch multiple times
+
+        //         console.log(`Slider-1 updated: min=${newMin}, max=${newMax}`);
+        //     }
+
+        //     // Update the min and max of the first slider
+        //     if (slider2 && slider2.noUiSlider) {
+        //         const newMin = isPolygonActive ? 1 : 3; // Min value when polygons are active/inactive
+        //         const newMax = isPolygonActive ? 5 : 20; // Max value when polygons are active/inactive
+
+        //         slider2.noUiSlider.updateOptions({
+        //             range: {
+        //                 min: newMin,
+        //                 max: newMax
+        //             },
+        //             start: [newMin, newMax] // Reset the range to match the new limits
+        //         },false); //! Added false to not trigger resketch multiple times
+
+        //         console.log(`Slider-1 updated: min=${newMin}, max=${newMax}`);
+        //     }
+
+        //     // Update the button text to indicate the current state
+        //     // polygonToggleButton.textContent = isPolygonActive ? "Deactivate Polygon" : "Activate Polygon";
+        // });
+
+        
+
+
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const waveforms = [
+                { name: "sine", image: "static/assets/sine-wave.svg" },
+                { name: "sawtooth", image: "static/assets/sawtooth-wave.svg" },
+                { name: "triangle", image: "static/assets/triangle-wave.svg" },
+                { name: "square", image: "static/assets/square-wave.svg" }
+            ];
+
+            let currentWaveformIndex = 0;
+            selectedWaveform = waveforms[currentWaveformIndex].name; // Initialize with the first waveform
+
+            const waveformImage = document.getElementById("waveformImage");
+            const waveformLabel = document.getElementById("waveformLabel");
+            const waveformPrev = document.getElementById("waveformPrev");
+            const waveformNext = document.getElementById("waveformNext");
+
+            function updateWaveform() {
+                const currentWaveform = waveforms[currentWaveformIndex];
+                selectedWaveform = currentWaveform.name; // Update the selected waveform
+                waveformImage.src = currentWaveform.image;
+                waveformImage.alt = currentWaveform.name.charAt(0).toUpperCase() + currentWaveform.name.slice(1) + " Wave";
+                // waveformLabel.textContent = currentWaveform.name.charAt(0).toUpperCase() + currentWaveform.name.slice(1); // Optional label update
+                console.log(`Selected waveform: ${selectedWaveform}`);
+            }
+
+            waveformPrev.addEventListener("click", () => {
+                currentWaveformIndex = (currentWaveformIndex - 1 + waveforms.length) % waveforms.length;
+                updateWaveform();
+            });
+
+            waveformNext.addEventListener("click", () => {
+                currentWaveformIndex = (currentWaveformIndex + 1) % waveforms.length;
+                updateWaveform();
+            });
+
+            // Initialize with the first waveform
+            updateWaveform();
+        });
+
+
+        
+    </script>
+    <script src="static/js/accordionButton.js"></script>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+      
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+          apiKey: "AIzaSyA31dDgbs0YxBp0ottmjVHLQZGUrgrsIkQ",
+          authDomain: "soundsketcher-8862c.firebaseapp.com",
+          projectId: "soundsketcher-8862c",
+          storageBucket: "soundsketcher-8862c.firebasestorage.app",
+          messagingSenderId: "291600523165",
+          appId: "1:291600523165:web:9d767497a58b3e0a905974",
+          measurementId: "G-Z4J48C53KS"
+        };
+      
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+      </script>
+</body>
+</html>
+
+

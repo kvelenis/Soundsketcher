@@ -9,12 +9,14 @@
 }
 .accordion-header {
     cursor: pointer;
-    padding: 10px;
+    padding: 20px;
     background-color: #7dd2d4;
     color: #000;
     /* border: 1px solid #000; */
     border-radius: 4px;
-    margin-bottom: 10px;
+    border-bottom: unset;
+    /* margin-bottom: 10px; */
+    transition: background-color 0.3s ease;
 }
 .accordion-header:hover {
     background-color: #68a5a6;

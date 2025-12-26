@@ -17,6 +17,16 @@
     align-items: center; /* Centers vertically */
 }
 
+/* //! Added these */
+#drop_area:hover
+{
+    border-style: solid;
+}
+#drop_area.solid
+{
+    border-style: solid;
+}
+
 .audio-player__container {
     margin: auto;
     display: flex;
@@ -96,7 +106,7 @@
     
     display: flex;
     flex-direction: column;
-    margin-bottom: 20px;
+    /* margin-bottom: 20px; */
     width: 100%;
 }
 
@@ -104,6 +114,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin: 0 0 6px 0;
 }
 
 .selection-header {
@@ -113,7 +124,8 @@
 }
 
 .featureSelect {
-    width: 300px;
+    width: 100%;
+    user-select: none;
 }
 
 .column {
@@ -140,11 +152,17 @@
     text-align: center;
 }
 
-.selection__submit-container{
-    margin-top: 10px;
+/* //! Some changes here */
+.selection__submit-container {
+    /* margin-top: 10px;
     display: flex;
-    justify-content: space-between;
-    
+    justify-content: space-between; */
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    grid-auto-rows: 1fr;
+    gap: 13px 13px;
+    width: 100%;
+    margin: 10px auto;
 }
 
 .svg-characteristic {
@@ -190,16 +208,13 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    z-index: 1050; /* //! Added this to be visible over bottom menu but not over swal*/
 }
 
+/* //! Changed this for accurate centering */
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
+    0%   { transform: translate(-50%,-50%) rotate(0deg); }
+    100% { transform: translate(-50%,-50%) rotate(360deg); }
 }
 
 @keyframes zoom {
@@ -224,8 +239,8 @@
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
-    margin-top: 30px;
-    padding: 10px;
+    /* margin-top: 30px;
+    padding: 10px; */
 }
 
 #playStopButton img:hover {
@@ -247,6 +262,9 @@
 /* Global Settings Container */
 .global-settings__container {
     border-radius: 5px;
+    margin-right: 10px;
+    box-sizing: border-box;
+    min-width: 135px;
 }
 
 /* Header Styling */
@@ -270,8 +288,13 @@
 .global-settings__item {
     display: flex;
     align-items: center;
+    flex-direction: column;
     /* justify-content: space-between; */
     gap: 10px;
+}
+
+.global-data-settings {
+    flex-direction: column;
 }
 
 /* Button Styling */
@@ -297,14 +320,26 @@
     color: #000;
 }
 
-.reset-button {
-    background-color: #f44336; /* Red color */
+/* //! Added these */
+#submitButton
+{
+    background-color: #d82638;
+    color: white;
+    min-height: 60px;
+}
+#submitButton:hover {
+    background-color: #a7111e; 
+}
+
+/* .reset-button
+{
+    background-color: #f44336;
     color: white;
 }
 
 .reset-button:hover {
-    background-color: #d32f2f; /* Darker red on hover */
-}
+    background-color: #d32f2f; 
+} */
 
 /* Checkbox and Label Styling */
 .global-settings__label {
@@ -330,6 +365,14 @@
     border-radius: 4px;
 }
 
+.colorpicker {
+    cursor: pointer;
+    width: 50px;
+    height: 30px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
 /* Basic styles for the bottom menu */
 .bottom-menu {
     position: fixed;
@@ -347,22 +390,26 @@
 .toggle-menu-button {
     font-size: 50px;
     position: absolute;
-    top: -90px;
+    top: -60px;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0);
-    color: 000;
     border: none;
-    border-radius: 90%;
-    padding: 40px;
+    border-radius: 100%;
+    padding: 5px;
     cursor: pointer;
-    /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s ease;
 }
 
 /* Rotate the arrow when the menu is open */
 .toggle-menu-button.open {
     transform: translateX(-50%) rotate(180deg);
+}
+
+.toggle-menu-button:focus
+{
+    outline: none;
 }
 
 #svg-characteristic-label-dash-array {
@@ -390,8 +437,7 @@
     flex-direction: row;
     border-top: 0px;
     border-style: solid;
-    padding:10px;
-    padding: 20px;
+    padding: 10px;
     text-align: center;
 }
 
@@ -427,10 +473,12 @@
     height: 100%;
     overflow: auto;
     background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+    user-select: text;
 }
 
 /* Modal content */
 .modal-content {
+    position: relative; /* //! Added this */
     background-color: white;
     margin: auto;
     padding: 20px;
@@ -456,8 +504,12 @@
 
 /* Close button */
 .close-button {
+    /* //! Changed position */
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    /* float: right; */
     color: #aaa;
-    float: right;
     font-size: 28px;
     font-weight: bold;
     cursor: pointer;
@@ -488,13 +540,48 @@
     margin: 10px auto;
     position: relative;
     background: #f0f0f0;
-    border: 1px solid #ccc;
+    border: 2px dashed #ccc;
     cursor: pointer;
+}
+ 
+.waveform-container:hover
+{
+    border-style: solid;
+}
+.waveform-container.solid
+{
+    border-style: solid;
+}
+
+#waveform-canvas
+{
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#waveform-text
+{
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: black;
+}
+
+.sonificators-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
 }
 
 .granulator_container {
-    display: flex;
-    flex-direction: column;
+    flex: 1;      
+    /* display: flex;
+    flex-direction: column; */
 }
 
 /* Container styling */
@@ -537,7 +624,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
+    flex-direction: row;
     font-family: Arial, sans-serif;
 }
 
@@ -559,7 +646,7 @@
 }
 
 .waveform-display img {
-    width: 100px;
+    width: 150px;
     height: auto;
     margin-bottom: 5px;
 }
@@ -591,7 +678,7 @@
 
 .button-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
 }
 
 .knob-container {

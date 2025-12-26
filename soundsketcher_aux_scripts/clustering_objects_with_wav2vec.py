@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 import os
@@ -30,6 +31,7 @@ def objectifier(audio_path):
     USE_PCA = False    # Set to True to use PCA
     # Add a flag to enable or disable attention mechanism
     USE_ATTENTION = False
+    DEBUG_PRINTS = True
 
     # Step 1: Add Attention Mechanism
     class AttentionLayer(nn.Module):
@@ -47,6 +49,8 @@ def objectifier(audio_path):
 
     # Step 2: Extract Wav2Vec Embeddings
     def extract_wav2vec_embeddings(audio_path, model_name="facebook/wav2vec2-base"):
+        if DEBUG_PRINTS:
+            print("Step 2: Extracting Wav2Vec Embeddings")
         """
         Extract Wav2Vec2 embeddings from raw audio.
         """
@@ -65,6 +69,8 @@ def objectifier(audio_path):
 
     # Step 3: Apply Attention to Embeddings
     def apply_attention_to_embeddings(embeddings):
+        if DEBUG_PRINTS:
+            print("Step 3: Applying Attention to Embeddings")
         """
         Apply a self-attention layer to refine embeddings if USE_ATTENTION is True.
         """
@@ -81,12 +87,17 @@ def objectifier(audio_path):
 
     # Step 4: Reduce Dimensionality
     def reduce_embeddings(embeddings, n_components=2):
+        if DEBUG_PRINTS:
+            print("Step 4: Reducing Dimensionality simple")
+
         reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, random_state=42)
         reduced_embeddings = reducer.fit_transform(embeddings)
         return reduced_embeddings
 
     # Step 4: Reduce Dimensionality with UMAP or PCA
     def reduce_embeddings(embeddings, n_components=2):
+        if DEBUG_PRINTS:
+            print("Step 4: Reducing Dimensionality")
         """
         Reduce dimensionality of embeddings using UMAP or PCA.
         """
@@ -106,6 +117,8 @@ def objectifier(audio_path):
 
     # Step 5: Dynamic Cluster Determination with Silhouette or Gap Statistic
     def determine_optimal_clusters(embeddings, max_clusters=20, method="silhouette"):
+        if DEBUG_PRINTS:
+            print("Step 5: Dynamic Clustering Determination with, ", method)
         """
         Determine the optimal number of clusters using Silhouette Analysis or Gap Statistic.
         
@@ -164,7 +177,7 @@ def objectifier(audio_path):
                 # Generate random reference datasets and compute their inertias
                 reference_inertias = []
                 for _ in range(n_reference):
-                    reference_data = shuffle(data)
+                    reference_data = shuffle(data, random_state=42)
                     kmeans_ref = KMeans(n_clusters=k, random_state=42, n_init=10).fit(reference_data)
                     reference_inertias.append(kmeans_ref.inertia_)
 
@@ -189,23 +202,32 @@ def objectifier(audio_path):
 
     # Step 6: Perform Clustering
     def cluster_embeddings(embeddings, n_clusters):
+        if DEBUG_PRINTS:
+            print("Step 6: Performing Clustering")
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         labels = kmeans.fit_predict(embeddings)
         return labels
 
     # Step 7: Add Temporal Smoothing
     def smooth_labels(labels, size=20):
+        if DEBUG_PRINTS:
+            print("Step 7: Adding Clustering")
         smoothed_labels = median_filter(labels, size=size)
         return smoothed_labels
 
     # Step 8: Detect Change Points
     def detect_change_points(embeddings):
+        if DEBUG_PRINTS:
+            print("Step 8: Detecting Change Points")
+
         model = rpt.Pelt(model="rbf").fit(embeddings)
         breakpoints = model.predict(pen=10)
         return breakpoints
 
     # Step 9: Visualize Clusters and Change Points with Non-Overlapping Similarity Annotations and Legend
     def visualize_clusters_and_transitions(audio_path, sr, y, labels, breakpoints, hop_length, similarities):
+        if DEBUG_PRINTS:
+            print("Step 9: Visualizing Clusters")
         """
         Visualize clusters, change points, and annotate similarities between segments with non-overlapping text,
         including a legend for cluster colors.
@@ -241,12 +263,15 @@ def objectifier(audio_path):
         plt.xlabel("Time (s)")
         plt.ylabel("Amplitude")
         plt.legend()
-        plt.savefig("clustering_destination_plots/"+os.path.splitext(audio_path)[0]+"_"+"clusters_and_transitions_with_non_overlapping_similarities_and_legend.png")
+        
+        # plt.savefig("/mnt/ssd1/kvelenis/soundsketcher/clustering_destination_plots/"+os.path.splitext(audio_path)[0]+"_"+"clusters_and_transitions_with_non_overlapping_similarities_and_legend.png")
         # plt.show()
 
 
     # Step 11: Extract CLAP Embeddings for Segments
     def extract_clap_embeddings_for_segments(audio_path, breakpoints, sr, hop_length, processor):
+        if DEBUG_PRINTS:
+            print("Step 11: Extracting CLAP Embeddings for Segments")
         """
         Extract CLAP embeddings for each segmented part of the audio.
         """
@@ -291,6 +316,8 @@ def objectifier(audio_path):
 
     # Step 12: Compare Consecutive Segments
     def compare_consecutive_segments_with_clap(clap_embeddings):
+        if DEBUG_PRINTS:
+            print("Step 12: Comparing Consecutive Segments")
         """
         Compare consecutive audio segments using CLAP embeddings.
         """
@@ -306,6 +333,8 @@ def objectifier(audio_path):
 
     # Step 13: Visualize CLAP Segment Similarities
     def visualize_clap_segment_similarity(similarities, breakpoints, sr, hop_length, audio_file_path):
+        if DEBUG_PRINTS:
+            print("Step 13: Visualizing CLAP Segment Similarities")
         """
         Visualize cosine similarities between consecutive audio segments.
         """
@@ -323,6 +352,8 @@ def objectifier(audio_path):
 
     # Step 15: Generate CLAP Text Embeddings for Semantic Labeling
     def generate_text_embeddings(terms, processor, model):
+        if DEBUG_PRINTS:
+            print("Step 15: Generating CLAP Text Embeddings for Semantic Labeling")
         """
         Generate CLAP embeddings for a list of textual terms.
         """
@@ -333,6 +364,8 @@ def objectifier(audio_path):
 
     # Step 15: Extract CLAP Embeddings for Clusters
     def extract_clap_embeddings_for_clusters(audio_path, labels, sr, hop_length, cluster_count, processor, model):
+        if DEBUG_PRINTS:
+            print("Step 15: Extracting CLAP Embeddings for Clusters")
         """
         Extract CLAP embeddings for audio segments belonging to each cluster.
         """
@@ -370,6 +403,8 @@ def objectifier(audio_path):
 
     # Step 18: Compute Centroids of CLAP Embeddings
     def compute_cluster_centroids(cluster_embeddings):
+        if DEBUG_PRINTS:
+            print("Step 18: Computing Centroids of CLAP Embeddings")
         """
         Compute the centroid of CLAP embeddings for each cluster.
         """
@@ -381,6 +416,8 @@ def objectifier(audio_path):
 
     # Step 19: Compare Cluster Centroids with Text Embeddings and Include Top Terms
     def compare_centroids_with_text(cluster_centroids, text_embeddings, terms, top_n=5):
+        if DEBUG_PRINTS:
+            print("Step 19: Compare Cluster Centroids with Text Embeddings and Include Top Terms")
         """
         Compare centroids of cluster CLAP embeddings with text embeddings.
 
@@ -503,65 +540,65 @@ def objectifier(audio_path):
 
         return filtered_labels
 
-    def gather_plot_data_for_plotly(audio_path, sr, y, labels, cluster_regions, similarities, semantic_centroids, top_n=5):
+    def gather_plot_data_for_plotly(audio_path, sr, y, labels, merged_clusters, similarities, semantic_centroids, top_n=5):
         """
-        Gather all plot data for visualization with Plotly and save it as a JSON file, excluding change points.
+        Gather all plot data for visualization with Plotly, including merged clusters and subregions with their own semantic labels.
 
         Parameters:
         - audio_path: str, the path to the audio file.
         - sr: int, the sample rate of the audio.
         - y: np.ndarray, the waveform of the audio.
-        - labels: array-like, cluster labels for each point.
-        - cluster_regions: list of dicts, each containing start_time, end_time, and label.
-        - similarities: list, cosine similarity values between segments.
-        - semantic_centroids: dict, top terms for each cluster.
-        - top_n: int, number of top terms to include for each cluster.
+        - labels: array-like, cluster labels for each frame.
+        - merged_clusters: list of dicts, each with start_time, end_time, label, embedding, and subregions.
+        - similarities: list of float, cosine similarities between embeddings (optional).
+        - semantic_centroids: dict mapping cluster labels to top term similarities.
+        - top_n: int, number of top semantic terms per cluster.
         """
-        # Generate colors for each cluster in HEX
-        unique_labels = np.unique(labels)
-        cluster_colors = {label: f"#{np.random.randint(0, 0xFFFFFF):06x}" for label in unique_labels}
 
-        # Prepare data for Plotly
         plot_data = {
             "audio_file": os.path.basename(audio_path),
             "sample_rate": sr,
-            "waveform": y.tolist(),  # Convert waveform to a list for JSON compatibility
+            "waveform": y.tolist(),
             "clusters": [],
-            "similarities": []
+            "similarities": similarities.tolist() if isinstance(similarities, np.ndarray) else similarities or []
         }
 
-        # Add cluster information
-        for label in unique_labels:
-            # Get the top terms for this cluster
+        for cluster in merged_clusters:
+            label = cluster["label"]
+            color = f"#{np.random.randint(0, 0xFFFFFF):06x}"
+
+            # Cluster-level top terms
             top_terms = []
             if label in semantic_centroids:
-                terms = semantic_centroids[label]["top_terms"]
-                top_terms = [{"term": term, "similarity": float(sim)} for term, sim in terms[:top_n]]
+                top_terms = [
+                    {"term": t, "similarity": float(sim)}
+                    for t, sim in semantic_centroids[label]["top_terms"][:top_n]
+                ]
 
-            # Add cluster regions
-            regions = [
-                {
-                    "start_time": region["start_time"],
-                    "end_time": region["end_time"]
-                }
-                for region in cluster_regions if region["label"] == label
-            ]
+            # Include subregions (with their own top terms if present)
+            regions = []
+            for sub in cluster.get("subregions", []):
+                regions.append({
+                    "start_time": sub["start_time"],
+                    "end_time": sub["end_time"],
+                    "label": sub["label"],
+                    "top_terms": [
+                        {"term": t, "similarity": float(sim)}
+                        for t, sim in sub.get("top_terms", [])[:top_n]
+                    ]
+                })
 
-            # Add cluster data
             plot_data["clusters"].append({
                 "label": int(label),
-                "color": cluster_colors[label],
+                "color": color,
+                "start_time": cluster["start_time"],
+                "end_time": cluster["end_time"],
                 "top_terms": top_terms,
-                "regions": regions  # Add regions for this cluster
+                "regions": regions
             })
 
-        # # Save data to a JSON file
-        # json_file_path = "clustering_destination_plots/" + os.path.splitext(audio_path)[0] + "_plotly_data.json"
-        # with open(json_file_path, "w") as f:
-        #     json.dump(plot_data, f, indent=4)
-
-        # print(f"Plotly-friendly data without change points saved to {json_file_path}")
         return plot_data
+
 
     def detect_cluster_regions(labels, sample_rate, hop_length):
         """
@@ -608,7 +645,7 @@ def objectifier(audio_path):
         model = ClapModel.from_pretrained("laion/larger_clap_music_and_speech")
         processor = ClapProcessor.from_pretrained("laion/larger_clap_music_and_speech")
         # Load the checkpoint and extract the state_dict
-        checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
+        checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"), weights_only=False)
         # Handle the checkpoint structure
         if "state_dict" in checkpoint:
             state_dict = checkpoint["state_dict"]
@@ -628,55 +665,69 @@ def objectifier(audio_path):
         print(f"Custom CLAP model loaded from: {checkpoint_path}")
         return processor, model
 
+    # 
     def merge_similar_clusters(cluster_regions, cluster_clap_embeddings, similarity_threshold=0.6):
-        """
-        Merge consecutive clusters based on their CLAP embedding similarity.
-        
-        Parameters:
-        - cluster_regions: list of dict, each with 'start_time', 'end_time', and 'label'.
-        - cluster_clap_embeddings: dict of cluster embeddings.
-        - similarity_threshold: float, threshold above which clusters will be merged.
-        
-        Returns:
-        - merged_regions: list of dict, updated cluster regions.
-        """
-        merged_regions = []
+        merged_clusters = []
         i = 0
-        
+
+        # Sort by start time to merge sequentially
+        cluster_regions = sorted(cluster_regions, key=lambda r: r["start_time"])
+
         while i < len(cluster_regions):
-            current_region = cluster_regions[i]
+            # Start a new merged cluster
+            current_region = cluster_regions[i].copy()
             current_label = current_region["label"]
-            current_embedding = np.mean(cluster_clap_embeddings[current_label], axis=0)  # Average Pooling
+            current_embedding = np.mean(cluster_clap_embeddings[current_label], axis=0)
+
+            merged = {
+                "start_time": current_region["start_time"],
+                "end_time": current_region["end_time"],
+                "label": current_label,
+                "embedding": current_embedding,
+                "subregions": [current_region]
+            }
 
             j = i + 1
             while j < len(cluster_regions):
                 next_region = cluster_regions[j]
                 next_label = next_region["label"]
-                next_embedding = np.mean(cluster_clap_embeddings[next_label], axis=0)  # Average Pooling
-                
-                # Compute similarity
-                similarity = cosine_similarity([current_embedding], [next_embedding])[0][0]
+                next_embedding = np.mean(cluster_clap_embeddings[next_label], axis=0)
+
+                similarity = cosine_similarity([merged["embedding"]], [next_embedding])[0][0]
 
                 if similarity >= similarity_threshold:
-                    # Merge regions
-                    current_region["end_time"] = next_region["end_time"]
+                    # Extend merged boundaries
+                    merged["end_time"] = next_region["end_time"]
+                    # Accumulate subregions
+                    merged["subregions"].append(next_region)
                 else:
                     break
                 j += 1
 
-            merged_regions.append(current_region)
+            # Optionally recompute the embedding as the mean of all subregions (for consistency)
+            merged_embeddings = [
+                np.mean(cluster_clap_embeddings[sub["label"]], axis=0)
+                for sub in merged["subregions"]
+            ]
+            merged["embedding"] = np.mean(merged_embeddings, axis=0)
+
+            merged_clusters.append(merged)
             i = j
 
-        return merged_regions
+        return merged_clusters
+
+
 
 
     # Step 14: Full Pipeline with CLAP Comparison
     def process_audio_with_clap_comparison(audio_file_path, hop_length=320, max_clusters=10, model_name="laion/clap"):
+        if DEBUG_PRINTS:
+            print("Step 14: Full Pipeline with CLAP Comparison")
         """
         Full pipeline with CLAP embedding comparison.
         """
 
-        clap_processor, clap_model = load_Clap_model("clap_model/music_speech_audioset_epoch_15_esc_89.98.pt")
+        clap_processor, clap_model = load_Clap_model("/mnt/ssd1/kvelenis/soundsketcher/aux_models/music_speech_audioset_epoch_15_esc_89.98.pt")
         # Extract Wav2Vec embeddings
         embeddings, sr, y = extract_wav2vec_embeddings(audio_file_path)
 
@@ -749,25 +800,54 @@ def objectifier(audio_path):
         ]
         # clap_processor = ClapProcessor.from_pretrained("laion/larger_clap_music_and_speech")
         # clap_model = ClapModel.from_pretrained("laion/larger_clap_music_and_speech")
+        # === Step 1: Generate embeddings for text descriptors (terms)
         terms, text_embeddings = generate_text_embeddings(text_terms, clap_processor, clap_model)
 
+        # === Step 2: Extract CLAP embeddings for all clusters (subregions)
+        cluster_clap_embeddings = extract_clap_embeddings_for_clusters(
+            audio_file_path,
+            smoothed_labels,
+            sr,
+            hop_length,
+            optimal_clusters,
+            clap_processor,
+            clap_model
+        )
 
-        # Extract CLAP embeddings for clusters
-        cluster_clap_embeddings = extract_clap_embeddings_for_clusters(audio_file_path, smoothed_labels, sr, hop_length, optimal_clusters, clap_processor, clap_model)
+        # === Step 3: Merge similar clusters (based on embedding similarity) 
+        #            and keep subregions inside
+        merged_clusters = merge_similar_clusters(cluster_regions, cluster_clap_embeddings, similarity_threshold=0.6)
 
+        # === Step 4: Compute top terms for subregions inside each merged cluster
+        for cluster in merged_clusters:
+            for subregion in cluster["subregions"]:
+                label = subregion["label"]
+                sub_embedding = np.mean(cluster_clap_embeddings[label], axis=0)
+                similarities = cosine_similarity([sub_embedding], text_embeddings)[0]
+                top_indices = np.argsort(similarities)[::-1][:5]
+                subregion["top_terms"] = [(terms[i], float(similarities[i])) for i in top_indices]
 
-        # Compute centroids of CLAP embeddings for clusters
-        cluster_centroids = compute_cluster_centroids(cluster_clap_embeddings)
-        # Merge similar clusters based on CLAP embeddings
-        merged_regions = merge_similar_clusters(cluster_regions, cluster_clap_embeddings, similarity_threshold=0.6)
-        # cluster_centroids = merged_regions
-        # Compare cluster centroids with text embeddings
+        # === Step 5: Compute cluster-level centroids from merged_clusters
+        cluster_centroids = {
+            cluster["label"]: cluster["embedding"]
+            for cluster in merged_clusters
+        }
+
+        # === Step 6: Compute top terms for cluster centroids (merged-level semantics)
         semantic_centroids = compare_centroids_with_text(cluster_centroids, text_embeddings, text_terms, top_n=5)
 
-        # Display top 5 semantic terms for each cluster
-        # top_terms = display_top_terms_for_clusters(cluster_centroids, terms, text_embeddings, audio_file_path)
-        # json_data = gather_plot_data_for_plotly(audio_path, sr, y, labels, breakpoints, hop_length, similarities, semantic_centroids, top_n=5)
-        json_data = gather_plot_data_for_plotly(audio_path, sr, y, labels, cluster_regions, similarities, semantic_centroids, top_n=5)
+        # === Step 7: Package all plot data including both merged and subregions
+        json_data = gather_plot_data_for_plotly(
+            audio_path,
+            sr,
+            y,
+            labels,
+            merged_clusters,      # Includes both start/end and subregions with top_terms
+            similarities,
+            semantic_centroids,   # Cluster-level semantic tags
+            top_n=5
+        )
+
 
         return smoothed_labels, reduced_embeddings, breakpoints, similarities, json_data
 

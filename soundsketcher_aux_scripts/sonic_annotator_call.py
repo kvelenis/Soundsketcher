@@ -2,12 +2,14 @@ import subprocess
 import os
 
 def run_sonic_annotator(input_wav_path, output_csv_dir):
+    print("input_wav_path ", input_wav_path)
+    print("output_csv_dir ", output_csv_dir)
     # Change directory to where sonic-annotator executable is located
-    os.chdir("/media/datadisk/velenisrepos/soundsketcher/sonic-annotator-1.6-linux64-static")
+    os.chdir("/mnt/ssd1/kvelenis/soundsketcher/sonic-annotator-1.6-linux64-static")
     # Construct the Sonic Annotator command
     command = [
         './sonic-annotator',
-        '-t', 'periodicity.n3', '-t', 'f0Candidates.n3',
+        '-t', 'periodicity.n3', '-t', 'f0candidates.n3',
         input_wav_path, 
         '-w', 'csv',
         '--csv-basedir', output_csv_dir
@@ -17,7 +19,7 @@ def run_sonic_annotator(input_wav_path, output_csv_dir):
         # Run the Sonic Annotator command
         subprocess.run(command, check=True)
         print('Sonic Annotator completed successfully.')
-        os.chdir("/media/datadisk/velenisrepos/soundsketcher")
+        os.chdir("/mnt/ssd1/kvelenis/soundsketcher")
     except subprocess.CalledProcessError as e:
         print(f'Error running Sonic Annotator: {e}')
 
