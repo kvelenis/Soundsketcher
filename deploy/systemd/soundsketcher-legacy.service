@@ -1,0 +1,19 @@
+[Unit]
+Description=SoundSketcher legacy app
+After=network.target
+
+[Service]
+Type=simple
+User=kvelenis
+Group=kvelenis
+WorkingDirectory=/mnt/ssd1/kvelenis/soundsketcher
+Environment=LD_LIBRARY_PATH=/usr/local/MATLAB/R2024b/bin/glnxa64:/usr/local/MATLAB/R2024b/bin/glnxa64
+Environment=PATH=/usr/local/MATLAB/R2024b/bin:/opt/miniconda3/envs/soundsketcher/bin:/opt/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/miniconda3/envs/soundsketcher/bin/python3.10 /mnt/ssd1/kvelenis/soundsketcher/main_with_event_detection.py
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

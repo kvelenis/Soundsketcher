@@ -1,0 +1,454 @@
+<header class="chameleon-navbar">
+    <div class="chameleon-navbar__site-row" style="user-select: none;">
+        <a class="chameleon-navbar__brand" href="{{ app_path(request, '/') }}" aria-label="SoundSketcher home">
+            <img class="chameleon-navbar__logo" src="{{ sandbox_static_path(request, 'assets/SC-logo.png') }}" alt="">
+            <span class="chameleon-navbar__brand-name">SoundSketcher</span>
+        </a>
+        <nav class="chameleon-navbar__site-nav" aria-label="Main navigation">
+            <a href="{{ app_path(request, '/') }}" class="chameleon-navbar__site-link chameleon-navbar__site-link--active">App</a>
+            <a href="{{ app_path(request, '/experiments') }}" class="chameleon-navbar__site-link">Experiments</a>
+            <a href="https://soundsketcher.web.auth.gr/" target="_blank" rel="noopener noreferrer" class="chameleon-navbar__site-link">About</a>
+        </nav>
+    </div>
+
+    <div class="chameleon-navbar__tool-row" aria-label="SoundSketcher app toolbar" style="user-select: none;">
+        <div class="chameleon-navbar__tool-group chameleon-navbar__transport-tools">
+            <button id="recCircleBtn" type="button" class="rec-circle-btn" aria-label="Start recording"></button>
+            <button id="playStopButtonHeader" class="chameleon-navbar__icon-button" type="button" aria-label="Play or stop">
+                <img id="playStopIconHeader" src="{{ sandbox_static_path(request, 'assets/play.png') }}" alt="">
+                <span>Play</span>
+            </button>
+            <button id="btnRecord" style="display: none;" type="button">Start Recording</button>
+            <button id="btnStopRecord" style="display: none;" type="button" disabled>Stop & Analyze</button>
+            <span id="recTimer" style="display: none;">00:00</span>
+        </div>
+
+        <div class="chameleon-navbar__tool-group">
+            <button id="printBtn" class="chameleon-navbar__tool-button" type="button">Print</button>
+            <div class="chameleon-navbar__tool-button chameleon-navbar__examples" id="examplesToggle" role="button" tabindex="0">
+                Examples
+                <ul id="examplesList" class="examples-dropdown" hidden></ul>
+            </div>
+        </div>
+
+        <div class="chameleon-navbar__tool-group chameleon-navbar__support-tools">
+            <a href="#" id="openTutorialModal" class="chameleon-navbar__tool-button">Help</a>
+            <a href="#" id="contactInfoLink" class="chameleon-navbar__tool-button">Feedback</a>
+        </div>
+    </div>
+</header>
+<!-- Pop-up Modal for Contact Info -->
+<div id="contactInfoModal" class="modal">
+  <div class="modal-content">
+    <span class="close-button" id="closeContactInfoModal">&times;</span>
+    <h2 class="modal-heading">Contact Information</h2>
+    <p class="modal-description">Feel free to reach out with any questions or feedback about the project.</p>
+
+    <ul style="margin-top: 1em; line-height: 1.8;">
+      <li>Email: <a href="mailto:kvelenis@gmail.com">kvelenis@gmail.com</a></li>
+      <li>Project Website: <a href="https://soundsketcher.web.auth.gr/" target="_blank">https://soundsketcher.web.auth.gr/  </a></li>
+    </ul>
+  </div>
+</div>
+
+
+
+<!-- Tutorial Modal Container -->
+<div id="tutorialModal" class="tutorialModal" style="display:none;">
+  <div class="tutorial-modal-content">
+    <span class="close-button" id="closeTutorialModal">&times;</span>
+
+    <!-- Sidebar TOC -->
+    <aside class="tutorial-sidebar">
+      <h3>Chapters</h3>
+      <ul id="tutorialTOC">
+        <li><a href="#ch1">1. Introduction</a></li>
+        <li><a href="#ch2">2. Uploading Audio</a></li>
+        <li><a href="#ch3">3. Choosing Visualizations</a></li>
+        <li><a href="#ch4">4. Configuring Features</a></li>
+        <li><a href="#ch5">5. Playing and Navigating the Sketch</a></li>
+        <li><a href="#ch6">6. Reading the Sketch</a></li>
+        <li><a href="#ch7">7. Exporting Results</a></li>
+        <li><a href="#ch8">8. Advanced Options</a></li>
+        <li><a href="#ch9">9. Troubleshooting and Tips</a></li>
+        <li><a href="#ch10">10. Project Team & Acknowledgements</a></li>
+        <li><a href="#appendix">Appendix</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Tutorial Content -->
+    <div class="tutorial-content">
+      <div class="tutorial-search">
+        <input type="text" id="tutorialSearchInput" placeholder="🔍 Search tutorial..." />
+        <button id="clearSearchBtn" style="margin-top: 5px;">✖ Clear</button>
+        <p id="noResultsMsg" style="display:none; color: red; font-style: italic; margin-top: 10px;">No results found.</p>
+      </div>
+      <section id="ch1">
+        <h2>1. Introduction</h2>
+        <p>Soundsketcher is an interactive web-based tool for visualizing sound through dynamic, data-driven sketches. It translates perceptual audio features into abstract visual forms that help users "see" the texture, structure, and evolution of sound.</p>
+        <p>Whether you're a musician, sound designer, researcher, or student, Soundsketcher allows you to explore audio from a fresh, visual perspective — combining traditional audio features (e.g., loudness, roughness, pitch) with creative interpretations based on spectromorphological thinking.</p>
+        <ul>
+          <li>Upload audio and generate real-time visualizations.</li>
+          <li>Choose between multiple sketching modes and feature sets.</li>
+          <li>Examine sound structure using region and cluster analysis.</li>
+          <li>Export your sketches for presentation or further editing.</li>
+        </ul>
+        <p>Soundsketcher supports creative analysis, educational exploration, and artistic experimentation — providing an intuitive and perceptually grounded way to engage with sound.</p>
+      </section>
+      <section id="ch2">
+        <h2>2. Uploading Audio</h2>
+      
+        <p>To begin using Soundsketcher, you’ll first need to upload an audio file. The system supports a wide range of audio formats, including <code>.wav</code>, <code>.mp3</code>, <code>.ogg</code>, and more. For best results, we recommend using uncompressed formats like <code>.wav</code>, but compressed formats are also supported.</p>
+      
+        <h3>🔄 How to Upload</h3>
+        <ul>
+          <li>Simply <strong>drag and drop</strong> your audio file onto the upload area on the homepage.</li>
+          <li>Alternatively, click the <strong>upload button</strong> and select a file from your device.</li>
+        </ul>
+      
+        <p>Once the upload is complete, Soundsketcher will check whether the file has already been analyzed:</p>
+        <ul>
+          <li>If the file <strong>has been previously processed</strong>, you’ll be asked whether to:
+            <ul>
+              <li><strong>Use cached data</strong> (faster loading with existing analysis)</li>
+              <li><strong>Reanalyze the file</strong> (useful if feature settings — like <em>frame size</em>, <em>hop length</em>, or <em>enabled features</em> — have changed)</li>
+            </ul>
+          </li>
+          <li>If it’s a <strong>new file</strong>, the system will automatically begin analyzing it, extracting features and segmenting the audio.</li>
+        </ul>
+      
+        <h3>📁 Tip</h3>
+        <p>Analysis time depends on the file’s length and the selected processing options (e.g., onset detection, embeddings, traditional features).</p>
+      </section>
+      <section id="ch3">
+        <h2>3. Choosing Visualizations</h2>
+      
+        <p>After uploading and analyzing your audio, Soundsketcher offers several ways to <strong>visualize</strong> the sound. Each visualization highlights different aspects of the audio based on selected features, segmentation, and perceptual mappings.</p>
+      
+        <h3>🎨 Available Visualization Modes</h3>
+      
+        <h4>🔹 Line-Based Sketch</h4>
+        <p>Draws time-aligned vertical lines where each line represents a short audio frame. Features are mapped to <strong>line height, angle, thickness, and color</strong>. Use this for <em>micro-level timbral detail</em> and to observe frame-by-frame changes.</p>
+      
+        <h4>🔹 Polygon-Based Sketch</h4>
+        <p>A variation of the line sketch mode that uses <strong>filled polygons</strong> instead of vertical lines. For each frame, a polygon is drawn with characteristics (shape, size, rotation, color) mapped from feature values. This mode provides a <em>richer visual mass</em> and stronger shape identity for each sound segment.</p>
+      
+        <h4>🔹 Trajectory Sketch</h4>
+        <p>This mode plots individual data points for selected features (e.g., spectral centroid, roughness) over time and <strong>connects them into continuous paths</strong>. It emphasizes <em>feature evolution over time</em> rather than discrete frames.</p>
+      
+        <h4>🔹 Region-Based Blob Sketch</h4>
+        <p>Visualizes macro segments (regions) as soft, blobby shapes, where:</p>
+        <ul>
+          <li>Width = duration</li>
+          <li>Height = spectral bandwidth</li>
+          <li>Vertical position = average spectral centroid</li>
+          <li>Opacity = loudness</li>
+        </ul>
+        <p>Helpful for grasping <em>overall structure and texture</em> of the sound.</p>
+      
+        <h4>🔹 Gesture-Based Inner Sketch</h4>
+        <p>Displays internal subregions or gestures within larger regions. These shapes are drawn based on <strong>feature shifts or detected onsets</strong> and emphasize <em>internal variation inside sound objects</em>.</p>
+      </section>
+      <section id="ch4">
+        <h2>4. Configuring Features</h2>
+      
+        <p>Soundsketcher lets you <strong>customize how audio features</strong> are used in each visualization. This makes it possible to focus on specific perceptual qualities or technical aspects of the sound.</p>
+      
+        <h3>🎛️ Feature Selection Panel</h3>
+        <p>After uploading a file, you’ll find a feature configuration panel where you can:</p>
+      
+        <ul>
+          <li><strong>✅ Enable or disable features</strong><br>
+          Each visualization mode uses one or more features (e.g., spectral centroid, roughness, brightness, pitch). You can toggle them on or off depending on which dimensions you want to emphasize.</li>
+      
+          <li><strong>🎯 Assign features to visual dimensions</strong><br>
+          For example, in line or polygon modes, you can assign features to:
+            <ul>
+              <li>Line or shape height</li>
+              <li>Angle or rotation</li>
+              <li>Thickness</li>
+              <li>Color hue, saturation, or brightness</li>
+            </ul>
+          </li>
+      
+          <li><strong>⚖️ Adjust scaling and clamping</strong>
+            <ul>
+              <li>You can choose to clamp selected features using <strong>robust min/max values</strong> (to avoid outliers distorting the sketch).</li>
+              <li>Unclamped features use raw values, useful for highlighting extremes.</li>
+              <li><strong>Logarithmic scaling</strong> is available for features like loudness or spectral centroid.</li>
+            </ul>
+          </li>
+        </ul>
+      
+        <h3>📌 Feature Presets</h3>
+        <p>Soundsketcher may include presets that load recommended feature mappings for specific use cases (e.g., “Texture Exploration”, “Pitch & Brightness”, or “Noise vs Tonality”). You can also define and save your own.</p>
+      
+        <h3>⚠️ Important Notes</h3>
+        <ul>
+          <li>Feature mappings apply independently to each visualization mode.</li>
+          <li>If you modify core analysis parameters (e.g., frame size or hop length), consider <strong>reanalyzing the file</strong>.</li>
+          <li>Some features (like roughness or brightness) are computed per frame, while others (like cluster IDs or gestures) are region-based.</li>
+        </ul>
+      </section>
+      <section id="ch5">
+        <h2>5. Playing and Navigating the Sketch</h2>
+      
+        <p>Once the visualization is generated, Soundsketcher allows you to interact with both the sound and its visual representation. This is key to understanding the relationship between audio events and the visual forms they produce.</p>
+      
+        <h3>▶️ Playback Controls</h3>
+        <ul>
+          <li><strong>Play / Pause</strong></li>
+          <li><strong>Seek Bar</strong> — Click or drag to move to a specific point in time.</li>
+          <li><strong>Loop / Repeat</strong> (optional in some modes)</li>
+        </ul>
+        <p>Playback is <strong>synchronized with the visual sketch</strong>, allowing you to see the active frame or region as the audio progresses.</p>
+      
+        <h3>🖱️ Visual Navigation</h3>
+        <ul>
+          <li><strong>Hover</strong> or <strong>click</strong> on lines, polygons, or regions to highlight corresponding sound segments.</li>
+          <li>Explore visual gestures by scrubbing through the timeline.</li>
+          <li><strong>Inspect feature values</strong> through tooltips or information panels (if enabled).</li>
+        </ul>
+      </section>
+      <section id="ch6">
+        <h2>6. Reading the Sketch</h2>
+      
+        <p>Each Soundsketcher visualization is built from audio features that have been mapped to visual parameters — such as size, position, color, and shape. Understanding how to <strong>read</strong> these visualizations is essential for interpreting the sonic qualities they reflect.</p>
+      
+        <h3>🧱 General Principles</h3>
+        <ul>
+          <li>The <strong>horizontal axis</strong> always represents <strong>time</strong> (left = earlier, right = later).</li>
+          <li>The <strong>vertical axis</strong> varies depending on the visualization mode and feature mapping.</li>
+        </ul>
+      
+        <h3>🟦 In Line and Polygon Sketches</h3>
+        <p>Each frame of audio is represented by a <strong>line or polygon</strong> whose characteristics are derived from feature values. For example:</p>
+        <ul>
+          <li>Line height → <em>Spectral centroid (brightness)</em></li>
+          <li>Line angle → <em>Periodicity or pitch variation</em></li>
+          <li>Line width → <em>Roughness</em></li>
+          <li>Color saturation → <em>Loudness</em></li>
+          <li>Polygon complexity → <em>Multi-feature interaction</em></li>
+        </ul>
+      
+        <h3>🟨 In Region-Based Sketches (Blob Mode)</h3>
+        <ul>
+          <li>Width = Region duration</li>
+          <li>Height = Spectral bandwidth</li>
+          <li>Y-position = Average spectral centroid</li>
+          <li>Opacity = Loudness or energy</li>
+          <li>Texture or pattern (if enabled) = Roughness or granularity</li>
+        </ul>
+        <p>This mode helps you see <strong>macro-structure, density, and contrast</strong> between sound events.</p>
+      
+        <h3>🟧 In Gesture-Based Sketches</h3>
+        <p>Subregions or gestures within each region are drawn as expressive inner shapes — strokes, curves, or blobs — indicating <strong>onsets, articulations, or changes in timbre</strong>.</p>
+      
+        <h3>🧠 Interpretation Tips</h3>
+        <ul>
+          <li>Treat the sketch as a <strong>graphic score</strong>: it visually reflects perceptual aspects of the sound.</li>
+          <li><strong>Noisy or inharmonic regions</strong> often appear rough, irregular, or chaotic.</li>
+          <li><strong>Tonal or pitched regions</strong> tend to look smooth, regular, or centered.</li>
+        </ul>
+      </section>
+      <section id="ch7">
+        <h2>7. Exporting Results</h2>
+      
+        <p>After exploring and refining your sketch, Soundsketcher allows you to <strong>export your work</strong> for documentation, presentations, publications, or creative projects.</p>
+      
+        <h3>📤 Export Options</h3>
+        <ul>
+          <li><strong>🖼️ SVG Export (Recommended)</strong><br>
+          Saves the visualization as a <strong>scalable vector graphic (.svg)</strong> — ideal for high-resolution printing, editing in design tools, or academic use.</li>
+      
+          <li><strong>🖼️ PNG Export</strong><br>
+          Saves a raster image (bitmap) of the current view — useful for quick sharing or screenshots.</li>
+      
+          <li><strong>📊 CSV or JSON Data (Advanced)</strong><br>
+          Exports the <strong>underlying feature values</strong>, segmentation data, and timestamps for use in data analysis environments (e.g., Python, MATLAB, Excel).</li>
+        </ul>
+      
+        <p>If you plan to remix, manipulate, or overlay your sketch in other media, the <strong>SVG export</strong> is the most flexible option.</p>
+      
+        <h3>📁 How to Export</h3>
+        <ul>
+          <li>Use the <strong>export menu or download buttons</strong> near the sketch canvas.</li>
+          <li>Select between full sketch export, current view, or region-specific export (if supported).</li>
+          <li>Some visual modes may allow overlay or combined layer exports.</li>
+        </ul>
+      
+        <h3>💡 Tip</h3>
+        <p>For best results, consider exporting:</p>
+        <ul>
+          <li>The sketch itself</li>
+          <li>A screenshot of the feature configuration</li>
+          <li>The original audio file or a waveform thumbnail</li>
+        </ul>
+      </section>
+      <section id="ch8">
+        <h2>8. Advanced Options</h2>
+      
+        <p>Beyond basic visualization, Soundsketcher provides several advanced tools for analyzing the <strong>internal structure of sound</strong> and customizing how it's represented.</p>
+      
+        <h3>🧠 Clustering & Region Grouping</h3>
+        <p>Soundsketcher can group similar regions using <strong>clustering algorithms</strong> based on multi-feature similarity (e.g., spectral shape, roughness, pitch):</p>
+        <ul>
+          <li>Each cluster is visually distinguished (e.g., by color, opacity, or shape style).</li>
+          <li>Clusters help identify recurring sound objects, motifs, or categories.</li>
+          <li>Visualized as background blobs, outlines, or overlay markers.</li>
+        </ul>
+      
+        <p>You can adjust:</p>
+        <ul>
+          <li>Clustering resolution (number of clusters or similarity threshold)</li>
+          <li>Which features are used for clustering</li>
+        </ul>
+      
+        <h3>✂️ Subregions and Gestures</h3>
+        <p>If <strong>onset detection</strong> or <strong>event segmentation</strong> is enabled, regions can be split into subregions:</p>
+        <ul>
+          <li>These reflect fine-grained internal divisions within a sound event</li>
+          <li>Useful for highlighting dynamics, rhythm, or micro-gesture structures</li>
+          <li>Visualized with expressive inner shapes inside main regions</li>
+        </ul>
+      
+        <h3>🧩 Overlay and Comparison Tools</h3>
+        <ul>
+          <li>Overlay pitch, brightness, or roughness as line graphs on top of other visual layers</li>
+          <li>Compare different sketches or versions side-by-side</li>
+          <li>Enable <strong>opacity blending</strong> or <strong>animated transitions</strong> for smoother exploration</li>
+        </ul>
+      
+        <h3>⚙️ Configuration Parameters</h3>
+        <p>Advanced users can:</p>
+        <ul>
+          <li>Adjust frame size, hop length, smoothing filters</li>
+          <li>Use logarithmic scaling or normalization presets</li>
+          <li>Experiment with custom feature sets</li>
+        </ul>
+      
+        <p>These options provide greater precision and flexibility in how the sketch represents sound perception and structure.</p>
+      </section>
+      <section id="ch9">
+        <h2>9. Troubleshooting and Tips</h2>
+      
+        <p>While Soundsketcher is designed for ease of use, you might occasionally encounter issues depending on your file type, browser, or settings. Here are some solutions and best practices:</p>
+      
+        <h3>🛠️ Common Issues</h3>
+      
+        <h4>❌ My file won’t upload</h4>
+        <ul>
+          <li>Make sure it’s a supported format (<code>.wav</code>, <code>.mp3</code>, <code>.ogg</code>, etc.).</li>
+          <li>Ensure the file isn’t corrupted or zero-length.</li>
+          <li>Try a different browser or disable browser extensions.</li>
+        </ul>
+      
+        <h4>🔄 File uploads but nothing happens</h4>
+        <ul>
+          <li>Make sure feature extraction has completed (watch for progress indicators).</li>
+          <li>If you changed core analysis settings, reanalyze instead of loading cached data.</li>
+        </ul>
+      
+        <h4>🎨 Sketch looks blank or strange</h4>
+        <ul>
+          <li>Some feature combinations may result in minimal output (e.g., flat feature values).</li>
+          <li>Try enabling other features or adjusting clamping/scaling settings.</li>
+          <li>Zoom in or reset the sketch view.</li>
+        </ul>
+      
+        <h4>🐢 Sketch is very slow</h4>
+        <ul>
+          <li>Large audio files or high-res analysis (small hop size) may slow rendering.</li>
+          <li>Try shorter excerpts or reduce analysis resolution.</li>
+        </ul>
+      
+        <h3>💡 Pro Tips</h3>
+        <ul>
+          <li>Combine line-based sketches with region blobs for depth and clarity.</li>
+          <li>Use clustering to spot recurring motifs or textures.</li>
+          <li>Save and reuse presets to avoid repeating configurations.</li>
+          <li>Export both the sketch and the raw feature data for deeper analysis.</li>
+        </ul>
+      
+        <h3>🧪 Browser Compatibility</h3>
+        <ul>
+          <li>Best supported on: <strong>Chrome</strong>, <strong>Firefox</strong>, and <strong>Edge</strong> (latest versions).</li>
+          <li><strong>Safari</strong> is supported but may have limited Web Audio API performance.</li>
+        </ul>
+      </section>
+      <section id="ch10">
+        <h2>10. Project Team & Acknowledgements</h2>
+      
+        <p><strong>Soundsketcher</strong> is the result of a collaborative research and development effort that brought together experts in music technology, perception, composition, and contemporary music theory. The project was developed within an academic and creative ecosystem supported by multiple institutions and individuals.</p>
+      
+        <h3>🎓 Project Team</h3>
+        <ul>
+          <li>Emilios Cambouropoulos – Aristotle University of Thessaloniki</li>
+          <li>Danae Stefanou – Aristotle University of Thessaloniki</li>
+          <li>Maximos Kaliakatsos-Papakostas – Hellenic Mediterranean University</li>
+          <li>Dimitris Maronidis – Aristotle University of Thessaloniki</li>
+          <li>Konstantinos Giannos – Aristotle University of Thessaloniki</li>
+          <li>Asterios Zacharakis – Aristotle University of Thessaloniki</li>
+          <li>Savvas Kazazis – Aristotle University of Thessaloniki</li>
+          <li>Alexandra Karamoutsiou – Aristotle University of Thessaloniki</li>
+          <li>Konstantinos Velenis – Aristotle University of Thessaloniki</li>
+          <li>Eva Matsigkou – Aristotle University of Thessaloniki</li>
+          <li>Vicky Zioga – PHENO</li>
+          <li>Nikos Kostopoulos – PHENO</li>
+        </ul>
+      
+        <h3>🌍 International Advisors</h3>
+        <ul>
+          <li>George Athanasopoulos – Humboldt University, Berlin</li>
+          <li>Richard Barrett – Institute of Sonology, The Hague / Leiden University</li>
+          <li>Emmanouil Benetos – Queen Mary University of London</li>
+        </ul>
+      </section>
+      <section id="appendix">
+        <h2>Appendix</h2>
+      
+        <h3>A. Audio Features Explanation</h3>
+        <ul>
+          <li><strong>Spectral Centroid:</strong> Indicates where the "center of mass" of the spectrum is located. Commonly used to describe the <em>brightness</em> of a sound — higher values represent more high-frequency content.</li>
+          <li><strong>F0-SC Combo:</strong> A hybrid metric combining <em>fundamental frequency (F0)</em> and <em>spectral centroid</em>. It balances pitch perception with the brightness of the sound.</li>
+          <li><strong>F0 | CREPE:</strong> Fundamental frequency estimation using the <em>CREPE model</em>, offering high-precision pitch tracking.</li>
+          <li><strong>Yin F0 | Librosa:</strong> YIN pitch detection as implemented in Librosa — effective for estimating fundamental frequency in musical signals.</li>
+          <li><strong>Yin F0 | Aubio:</strong> Similar to Librosa's YIN method, but using the <em>Aubio</em> library.</li>
+          <li><strong>F0 | CREPE Confidence:</strong> Confidence level of CREPE’s pitch estimation. Higher values indicate more trustworthy pitch detection.</li>
+          <li><strong>Spectral Flux:</strong> Measures how rapidly the spectrum is changing — good for detecting onsets or dynamic shifts.</li>
+          <li><strong>Spectral Flatness:</strong> A measure of how noise-like a sound is. Higher values = more noise-like; lower values = more tonal.</li>
+          <li><strong>Spectral Bandwidth:</strong> The spread or width of the spectrum — indicates how wide the frequency range is.</li>
+          <li><strong>Zero Crossing Rate:</strong> Counts how often the signal crosses zero. Often used to assess percussiveness or noisiness.</li>
+          <li><strong>Amplitude:</strong> Represents the energy or loudness of the signal. Higher values = louder sounds.</li>
+          <li><strong>Brightness:</strong> Related to the amount of high-frequency content — contributes to perceived clarity or sharpness.</li>
+          <li><strong>Sharpness:</strong> A perceptual measure of how “cutting” or harsh the sound feels — often linked to higher frequencies.</li>
+          <li><strong>Loudness:</strong> Perceptual intensity of the sound — accounts for frequency sensitivity of human hearing.</li>
+          <li><strong>Loudness-ZCR:</strong> A hybrid feature that captures both loudness and temporal noisiness.</li>
+          <li><strong>None:</strong> Disables the mapping for a particular visual dimension (e.g., height or color).</li>
+        </ul>
+      
+        <h3>B. Mapping Settings Explanation</h3>
+        <h4>🎛️ Functionality</h4>
+        <ul>
+          <li><strong>Inversion:</strong> Reverses the feature mapping. High values are shown at the bottom of the sketch instead of the top.</li>
+          <li><strong>Sliders:</strong> Define the <em>minimum and maximum</em> values of each mapped feature, useful for focusing on specific value ranges.</li>
+          <li><strong>Randomizer:</strong> Randomly assigns features to each available visual mapping dimension — useful for playful discovery.</li>
+          <li><strong>Reset:</strong> Restores all settings to default, including sliders, mappings, and inversions.</li>
+        </ul>
+      
+        <h4>⌨️ Hotkeys</h4>
+        <ul>
+          <li><strong>F:</strong> Toggles the settings menu (e.g., fold/unfold).</li>
+          <li><strong>A:</strong> Resketch the score.</li>
+          <li><strong>S:</strong> Trigger the randomizer functionality.</li>
+          <li><strong>D:</strong> Resets all settings to their default states.</li>
+          <li><strong>Z:</strong> Select preset A.</li>
+          <li><strong>X:</strong> Select preset B.</li>
+          <li><strong>C:</strong> Select preset C.</li>
+          <li><strong>Spacebar:</strong> Play/pause the audio.</li>
+        </ul>
+      </section>
+                                                   
+    </div>
+  </div>
+</div>  

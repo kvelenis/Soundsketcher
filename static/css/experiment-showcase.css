@@ -1,0 +1,190 @@
+:root {
+  color-scheme: light;
+  --ink: #1c2229;
+  --muted: #5d6874;
+  --line: #d8dee7;
+  --paper: #f5f7fa;
+  --panel: #ffffff;
+  --accent: #2f6f87;
+  --accent-soft: #e6f1f4;
+  --blue: var(--accent);
+  --green: #2e7566;
+  --gold: #9a6a1e;
+  --danger: #a33d3d;
+  --experiment-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html {
+  font-family: var(--experiment-font);
+}
+
+body {
+  font-family: var(--experiment-font);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.55;
+  font-size: 16px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+h1,
+h2,
+h3,
+p {
+  letter-spacing: 0;
+}
+
+h1 {
+  font-size: clamp(2.3rem, 6vw, 5.2rem);
+  line-height: 0.95;
+  font-weight: 780;
+}
+
+h2,
+.section-title {
+  font-weight: 760;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lead,
+.hero__copy,
+.section-copy,
+.notice {
+  color: var(--muted);
+}
+
+.button,
+.play-button,
+.real-play-button,
+.icon-button,
+.segmented button,
+.language-switch button,
+.language-toggle button {
+  font-weight: 730;
+}
+
+.button,
+.play-button,
+.real-play-button,
+.icon-button {
+  border-radius: 7px;
+}
+
+.button.primary,
+.button:not(.ghost):not(.button--secondary),
+.real-play-button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.button--secondary,
+.button.ghost {
+  background: transparent;
+  color: var(--accent);
+}
+
+.language-switch,
+.language-toggle,
+.segmented {
+  border-color: var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.language-switch button[aria-pressed="true"],
+.language-toggle button[aria-pressed="true"],
+.segmented button[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+
+.method-card,
+.stat-card,
+.figure-card,
+.stimulus-card,
+.sound-card,
+.context-section,
+.transport,
+.demo-ui,
+.stat {
+  border-color: var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.figure-card figcaption {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.stat strong,
+.stat-card strong,
+.stimulus-code {
+  color: var(--accent);
+}
+
+.sound-card[aria-current="true"],
+.stimulus-card[aria-current="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.experiment-topnav {
+  position: relative;
+  z-index: 5;
+  display: inline-flex;
+  gap: 4px;
+  max-width: calc(100vw - 28px);
+  margin: 16px 0 0 16px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(28, 34, 41, 0.08);
+}
+
+.experiment-topnav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 5px;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 730;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.experiment-topnav a:hover,
+.experiment-topnav a[aria-current="page"] {
+  background: var(--ink);
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .experiment-topnav {
+    margin: 12px;
+    overflow-x: auto;
+  }
+}

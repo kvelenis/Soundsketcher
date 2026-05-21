@@ -1,0 +1,18 @@
+[Unit]
+Description=SoundSketcher refactor app
+After=network.target
+
+[Service]
+Type=simple
+User=kvelenis
+Group=kvelenis
+WorkingDirectory=/mnt/ssd1/kvelenis/soundsketcher-staging/refactor_sandbox
+EnvironmentFile=/mnt/ssd1/kvelenis/soundsketcher-staging/refactor_sandbox/.env.staging
+ExecStart=/mnt/ssd1/kvelenis/soundsketcher-staging/refactor_sandbox/scripts/run_python.sh -m uvicorn app.main:app --host 127.0.0.1 --port 5013
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

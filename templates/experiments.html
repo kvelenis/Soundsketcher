@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Experiments | SoundSketcher</title>
+  <link rel="icon" href="{{ sandbox_static_path(request, 'assets/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/experiment-showcase.css') }}?v=showcase-typography-2">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .experiments-page {
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 52px 0 72px;
+    }
+
+    .experiments-hero {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+
+    .experiments-hero p {
+      max-width: 780px;
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .experiment-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .experiment-card {
+      display: grid;
+      gap: 16px;
+      min-height: 260px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .experiment-card h2 {
+      margin: 0;
+      font-size: clamp(1.4rem, 3vw, 2.1rem);
+      line-height: 1.05;
+    }
+
+    .experiment-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .experiment-card__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-self: end;
+    }
+
+    .experiment-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .experiment-card__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .experiment-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--accent);
+      border-radius: 7px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 730;
+      text-decoration: none;
+    }
+
+    .experiment-link.secondary {
+      background: transparent;
+      color: var(--accent);
+    }
+
+    @media (max-width: 720px) {
+      .experiments-page {
+        width: min(100% - 24px, 1180px);
+        padding-top: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="experiment-topnav" aria-label="SoundSketcher experiment pages">
+    <a href="{{ app_path(request, '/') }}">App</a>
+    <a href="{{ app_path(request, '/experiments') }}" aria-current="page">Experiments</a>
+    <a href="{{ app_path(request, '/indefinite_pitch') }}">Indefinite pitch</a>
+    <a href="{{ app_path(request, '/noise_tonal_preference') }}#demo">Noise-tonal</a>
+  </nav>
+
+  <main class="experiments-page">
+    <section class="experiments-hero">
+      <p class="eyebrow">SoundSketcher research</p>
+      <h1>Experiments</h1>
+      <p class="lead">
+        Showcase pages for studies that shaped SoundSketcher’s mappings, examples, and evaluation logic.
+      </p>
+    </section>
+
+    <section class="experiment-grid" aria-label="Experiment showcase pages">
+      <article class="experiment-card">
+        <div>
+          <h2>Indefinite-Pitch Sounds</h2>
+          <p>
+            A JASA Express Letters showcase of the pitch-height matching task for non-harmonic and ambiguous sounds.
+          </p>
+        </div>
+        <div class="experiment-card__meta">
+          <span class="experiment-pill">19 study sounds</span>
+          <span class="experiment-pill">JASA EL</span>
+          <span class="experiment-pill">Pitch height</span>
+        </div>
+        <div class="experiment-card__actions">
+          <a class="experiment-link" href="{{ app_path(request, '/indefinite_pitch') }}">Open showcase</a>
+        </div>
+      </article>
+
+      <article class="experiment-card">
+        <div>
+          <h2>Noise-Tonal Preference</h2>
+          <p>
+            A reconstruction of the SoundSketcher questionnaire for choosing how noisy and tonal components should be visually mapped.
+          </p>
+        </div>
+        <div class="experiment-card__meta">
+          <span class="experiment-pill">6 stimulus pairs</span>
+          <span class="experiment-pill">Real renderer</span>
+          <span class="experiment-pill">Preference task</span>
+        </div>
+        <div class="experiment-card__actions">
+          <a class="experiment-link" href="{{ app_path(request, '/noise_tonal_preference') }}#demo">Open showcase</a>
+          <a class="experiment-link secondary" href="{{ app_path(request, '/noise_tonal_preference') }}#figures">See results</a>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

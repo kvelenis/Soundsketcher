@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Soundsketcher</title>
+    <link rel="icon" href="{{ sandbox_static_path(request, 'assets/favicon.svg') }}" type="image/svg+xml">
+
+    {% include "partials/vendor_head.html" %}
+
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/app-chrome.css') }}?v=frontend-migration-52">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/mixer.css') }}?v=frontend-migration-46">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/sliders.css') }}?v=frontend-migration-48">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/accordion.css') }}?v=frontend-migration-49">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/settings-panel.css') }}?v=frontend-migration-51">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/ui-overlays.css') }}?v=frontend-migration-52">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/app-shell.css') }}?v=frontend-migration-54">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/header.css') }}?v=frontend-migration-28">
+    <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/app-layout.css') }}?v=frontend-migration-20">
+
+
+</head>
+<body>
+    {% include "header.html" %}
+    {% include "partials/app_chrome.html" %}
+    {% include "partials/bottom_menu.html" %}
+
+    {% include "partials/app_scripts.html" %}
+</body>
+</html>

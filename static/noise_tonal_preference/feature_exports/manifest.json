@@ -1,0 +1,143 @@
+{
+  "source": "legacy user_data feature exports from /mnt/ssd1/kvelenis/soundsketcher",
+  "stimuli": [
+    {
+      "stimulus_id": "stimulus_01",
+      "files": [
+        {
+          "kind": "noise",
+          "name": "noise.wav",
+          "hash": "eb728f3e694c3c3f3e24f1bf3c87565e4127ff4053083c2b5dd3e9244f23d792",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_01/noise.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/eb728f3e694c3c3f3e24f1bf3c87565e4127ff4053083c2b5dd3e9244f23d792.json"
+        },
+        {
+          "kind": "tonal",
+          "name": "tonal.wav",
+          "hash": "7a2453e2f62a9400cb391b5d946a90352de8bc2324376485af936fd987438501",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_01/tonal.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/7a2453e2f62a9400cb391b5d946a90352de8bc2324376485af936fd987438501.json"
+        }
+      ],
+      "audio_urls": [
+        "/static/noise_tonal_preference_samples/stimulus_01/noise.wav",
+        "/static/noise_tonal_preference_samples/stimulus_01/tonal.wav"
+      ]
+    },
+    {
+      "stimulus_id": "stimulus_02",
+      "files": [
+        {
+          "kind": "noise",
+          "name": "noise.wav",
+          "hash": "0be5dc69d9ea8332878aff9f7875703406b8a0d14e21d0ed16405cef67c991e4",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_02/noise.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/0be5dc69d9ea8332878aff9f7875703406b8a0d14e21d0ed16405cef67c991e4.json"
+        },
+        {
+          "kind": "tonal",
+          "name": "tonal.wav",
+          "hash": "3c7a758f07ba6a37d38669a8f890f65bffeb00f040aa4295665d7fdf30c74ae5",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_02/tonal.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/3c7a758f07ba6a37d38669a8f890f65bffeb00f040aa4295665d7fdf30c74ae5.json"
+        }
+      ],
+      "audio_urls": [
+        "/static/noise_tonal_preference_samples/stimulus_02/noise.wav",
+        "/static/noise_tonal_preference_samples/stimulus_02/tonal.wav"
+      ]
+    },
+    {
+      "stimulus_id": "stimulus_03",
+      "files": [
+        {
+          "kind": "noise",
+          "name": "noise.wav",
+          "hash": "3a0ea1d6db6c902eccf333bd1ab06128596945eba371d5c33d0d8cf843ad6b86",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_03/noise.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/3a0ea1d6db6c902eccf333bd1ab06128596945eba371d5c33d0d8cf843ad6b86.json"
+        },
+        {
+          "kind": "tonal",
+          "name": "tonal.wav",
+          "hash": "91d2c5a47f8b1e69691c2e0094058cb1a4c316496eedcc1db5feec6a0b3cb195",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_03/tonal.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/91d2c5a47f8b1e69691c2e0094058cb1a4c316496eedcc1db5feec6a0b3cb195.json"
+        }
+      ],
+      "audio_urls": [
+        "/static/noise_tonal_preference_samples/stimulus_03/noise.wav",
+        "/static/noise_tonal_preference_samples/stimulus_03/tonal.wav"
+      ]
+    },
+    {
+      "stimulus_id": "stimulus_04",
+      "files": [
+        {
+          "kind": "noise",
+          "name": "noise.wav",
+          "hash": "0b57f0edfd3b1c35cbd7fbb16384a93ab5908e28a2c3374c321272e53ead0e94",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_04/noise.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/0b57f0edfd3b1c35cbd7fbb16384a93ab5908e28a2c3374c321272e53ead0e94.json"
+        },
+        {
+          "kind": "tonal",
+          "name": "tonal.wav",
+          "hash": "1a0733e49a26b6036115518e51a5d8f8ac91b050f6e58701d2406c99a82b427e",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_04/tonal.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/1a0733e49a26b6036115518e51a5d8f8ac91b050f6e58701d2406c99a82b427e.json"
+        }
+      ],
+      "audio_urls": [
+        "/static/noise_tonal_preference_samples/stimulus_04/noise.wav",
+        "/static/noise_tonal_preference_samples/stimulus_04/tonal.wav"
+      ]
+    },
+    {
+      "stimulus_id": "stimulus_05",
+      "files": [
+        {
+          "kind": "noise",
+          "name": "noise.wav",
+          "hash": "76a974ffd5199fff122cf24e312fe5504bdfde1523ef5c91fe3f8c350ce9d961",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_05/noise.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/76a974ffd5199fff122cf24e312fe5504bdfde1523ef5c91fe3f8c350ce9d961.json"
+        },
+        {
+          "kind": "tonal",
+          "name": "tonal.wav",
+          "hash": "9947dbdb5136b6b9da24ba8d48b5e77e7534f83ad0ca576f1b24fb858648d1b2",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_05/tonal.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/9947dbdb5136b6b9da24ba8d48b5e77e7534f83ad0ca576f1b24fb858648d1b2.json"
+        }
+      ],
+      "audio_urls": [
+        "/static/noise_tonal_preference_samples/stimulus_05/noise.wav",
+        "/static/noise_tonal_preference_samples/stimulus_05/tonal.wav"
+      ]
+    },
+    {
+      "stimulus_id": "stimulus_06",
+      "files": [
+        {
+          "kind": "noise",
+          "name": "noise.wav",
+          "hash": "2ce74337b5b2c3c427526f95c92416ed94668ba5f8b0a9821d5f464f9ec79e10",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_06/noise.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/2ce74337b5b2c3c427526f95c92416ed94668ba5f8b0a9821d5f464f9ec79e10.json"
+        },
+        {
+          "kind": "tonal",
+          "name": "tonal.wav",
+          "hash": "5fcc74921ec1a963edc36a57a883e999e4deb7a7bceb15b817480c86f363fc8e",
+          "audio_url": "/static/noise_tonal_preference_samples/stimulus_06/tonal.wav",
+          "features_url": "/static/noise_tonal_preference/feature_exports/5fcc74921ec1a963edc36a57a883e999e4deb7a7bceb15b817480c86f363fc8e.json"
+        }
+      ],
+      "audio_urls": [
+        "/static/noise_tonal_preference_samples/stimulus_06/noise.wav",
+        "/static/noise_tonal_preference_samples/stimulus_06/tonal.wav"
+      ]
+    }
+  ]
+}

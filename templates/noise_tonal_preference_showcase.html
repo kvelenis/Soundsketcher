@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noise-Tonal Preference Experiment</title>
+  <link rel="icon" href="{{ sandbox_static_path(request, 'assets/favicon.svg') }}" type="image/svg+xml">
+  {% include "partials/vendor_head.html" %}
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/app-chrome.css') }}?v=noise-tonal-real-2">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/mixer.css') }}?v=noise-tonal-real-1">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/sliders.css') }}?v=noise-tonal-real-1">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/accordion.css') }}?v=noise-tonal-real-1">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/settings-panel.css') }}?v=noise-tonal-real-1">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/ui-overlays.css') }}?v=noise-tonal-real-1">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/app-shell.css') }}?v=noise-tonal-real-1">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/header.css') }}?v=noise-tonal-real-2">
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/app-layout.css') }}?v=noise-tonal-real-1">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #20242a;
+      --muted: #59636f;
+      --line: #d8dee7;
+      --panel: #ffffff;
+      --paper: #f5f7fa;
+      --accent: #3d6f95;
+      --accent-soft: #e7f0f7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.55;
+    }
+
+    a { color: var(--accent); }
+
+    .hero {
+      min-height: 86vh;
+      display: grid;
+      align-items: center;
+      padding: 48px 24px 32px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.82), rgba(245,247,250,1)),
+        linear-gradient(135deg, #f7fbff, #edf3f7);
+    }
+
+    .hero__inner,
+    .section__inner {
+      width: min(1160px, 100%);
+      margin: 0 auto;
+    }
+
+    #demo .section__inner {
+      width: min(1760px, calc(100vw - 48px));
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 0;
+      font-size: clamp(2.2rem, 7vw, 5.5rem);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .hero__copy {
+      max-width: 760px;
+      margin: 24px 0 0;
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+
+    .hero__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .button--secondary {
+      background: transparent;
+      color: var(--accent);
+    }
+
+    section {
+      padding: 56px 24px;
+    }
+
+    .section--white {
+      background: white;
+    }
+
+    .section-title {
+      margin: 0 0 16px;
+      font-size: clamp(1.7rem, 4vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .section-copy {
+      max-width: 820px;
+      margin: 0 0 26px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .method-grid,
+    .stats-grid,
+    .figures-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .method-card,
+    .stat-card,
+    .figure-card,
+    .stimulus-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .method-card,
+    .stat-card {
+      padding: 18px;
+    }
+
+    .method-card h3,
+    .stat-card h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+
+    .method-card p,
+    .stat-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .stat-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .demo-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .demo-ui {
+      min-height: 540px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+    }
+
+    .real-demo-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .real-demo-status {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .real-play-button {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .real-sketch-frame {
+      height: min(78vh, 820px);
+      min-height: 620px;
+      border: 2px dashed #b9c1cc;
+      border-radius: 14px;
+      background: #fbfcfd;
+      overflow: hidden;
+    }
+
+    .real-sketch-frame #svgWrapper {
+      width: 100%;
+      height: 100%;
+      min-height: 620px;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .real-sketch-frame #svgWrapper svg {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100%;
+    }
+
+    .demo-controls {
+      margin-top: 18px;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .demo-value {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .stimulus-list {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(170px, 1fr));
+      gap: 10px;
+      max-height: none;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .stimulus-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 12px;
+    }
+
+    .stimulus-card[aria-current="true"] {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .stimulus-card strong {
+      font-size: 0.95rem;
+    }
+
+    .stimulus-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .icon-button {
+      min-width: 92px;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .icon-button:hover,
+    .icon-button[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .icon-button:disabled {
+      cursor: wait;
+      opacity: 0.5;
+    }
+
+    .figure-card {
+      overflow: hidden;
+    }
+
+    .figure-card img {
+      display: block;
+      width: 100%;
+      background: white;
+    }
+
+    .figure-card figcaption {
+      padding: 12px 14px 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .language-toggle {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 20;
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .language-toggle button {
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .language-toggle button[aria-pressed="true"] {
+      background: var(--accent);
+      color: white;
+    }
+
+    .engine-support {
+      display: none !important;
+    }
+
+    #featureProgressStatus {
+      position: static;
+      margin: 0 0 12px;
+      width: 100%;
+      max-width: none;
+      box-shadow: none;
+    }
+
+    @media (max-width: 820px) {
+      .demo-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .stimulus-list {
+        max-height: none;
+      }
+
+      .stimulus-card {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/experiment-showcase.css') }}?v=showcase-typography-1">
+</head>
+<body>
+  <nav class="experiment-topnav" aria-label="SoundSketcher experiment pages">
+    <a href="{{ app_path(request, '/') }}">App</a>
+    <a href="{{ app_path(request, '/experiments') }}">Experiments</a>
+    <a href="{{ app_path(request, '/indefinite_pitch') }}">Indefinite pitch</a>
+    <a href="{{ app_path(request, '/noise_tonal_preference') }}#demo" aria-current="page">Noise-tonal</a>
+  </nav>
+  <div class="language-toggle" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="el" aria-pressed="false">EL</button>
+  </div>
+
+  <header class="hero">
+    <div class="hero__inner">
+      <p class="eyebrow" data-i18n="eyebrow">SoundSketcher experiment showcase</p>
+      <h1 data-i18n="title">Noise-Tonal Preference</h1>
+      <p class="hero__copy" data-i18n="intro">
+        A short experiment on how listeners place noisy and tonal sound components on the vertical axis of a SoundSketcher drawing.
+      </p>
+      <div class="hero__actions">
+        <a class="button" href="#demo" data-i18n="tryDemo">Try the real UI</a>
+        <a class="button button--secondary" href="#figures" data-i18n="seeResults">See results</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="section--white">
+    <div class="section__inner">
+      <h2 class="section-title" data-i18n="methodTitle">How the data was collected</h2>
+      <p class="section-copy" data-i18n="methodCopy">
+        Participants saw a SoundSketcher visualization for each sound pair and adjusted one slider from “Noise” to “Clear tonal pitch”.
+      </p>
+      <div class="method-grid">
+        <article class="method-card">
+          <h3 data-i18n="step1Title">1. Consent and profile</h3>
+          <p data-i18n="step1Copy">Participants first read the Greek instructions, gave consent, and entered basic music-background information.</p>
+        </article>
+        <article class="method-card">
+          <h3 data-i18n="step2Title">2. Six paired stimuli</h3>
+          <p data-i18n="step2Copy">Each trial used a stimulus folder containing one tonal and one noise audio example.</p>
+        </article>
+        <article class="method-card">
+          <h3 data-i18n="step3Title">3. Slider judgment</h3>
+          <p data-i18n="step3Copy">The response was a continuous 0-1 value indicating the preferred visual mapping between noise and tonal pitch.</p>
+        </article>
+        <article class="method-card">
+          <h3 data-i18n="step4Title">4. Anonymous logging</h3>
+          <p data-i18n="step4Copy">Responses were saved as anonymous session records for later agreement and distribution analysis.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="demo">
+    <div class="section__inner">
+      <h2 class="section-title" data-i18n="demoTitle">Real SoundSketcher reconstruction</h2>
+      <p class="section-copy" data-i18n="demoCopy">
+        This is a non-saving showcase of the original task. Choose any of the six stimulus pairs, load the real SoundSketcher visualization, play the pair, and move the slider to redraw the mapping exactly like the experiment.
+      </p>
+      <div class="demo-shell">
+        <div class="demo-ui" aria-label="Real SoundSketcher questionnaire visualization">
+          <div class="real-demo-toolbar">
+            <div id="realDemoStatus" class="real-demo-status" data-i18n="chooseStimulus">Choose one of the six stimulus pairs.</div>
+            <button type="button" id="playPairBtn" class="real-play-button" data-i18n="playPair">Play / stop pair</button>
+          </div>
+          <div class="real-sketch-frame">
+            <div id="spinner" class="spinner app-hidden"></div>
+            <div id="featureProgressStatus" class="feature-progress-status app-hidden" aria-live="polite"></div>
+            <div id="svgWrapper"></div>
+            <div id="tooltip" class="tooltip app-hidden"></div>
+            <input type="file" id="hiddenFileInput" class="app-hidden" accept="audio/*" multiple disabled>
+          </div>
+          <div class="demo-controls">
+            <div class="slider-labels">
+              <span data-i18n="noiseLabel">Noise</span>
+              <span data-i18n="tonalLabel">Clear tonal pitch</span>
+            </div>
+            <div id="preference-visible-slider"></div>
+            <div class="demo-value"><span data-i18n="currentValue">Current value</span>: <strong id="preferenceSliderValue">1.00</strong></div>
+          </div>
+        </div>
+        <div>
+          <div id="stimulusList" class="stimulus-list" aria-label="Stimulus list"></div>
+        </div>
+      </div>
+      <div class="engine-support" aria-hidden="true">
+        {% include "header.html" %}
+        {% include "partials/bottom_menu.html" %}
+      </div>
+    </div>
+  </section>
+
+  <section class="section--white">
+    <div class="section__inner">
+      <h2 class="section-title" data-i18n="resultsTitle">What the current analysis shows</h2>
+      <p class="section-copy" data-i18n="resultsCopy">
+        The existing analysis focuses on whether participants converged around shared slider regions rather than whether every stimulus received one exact value.
+      </p>
+      <div class="stats-grid">
+        <article class="stat-card"><strong>41</strong><p data-i18n="participants">participants in the complete-session agreement analysis</p></article>
+        <article class="stat-card"><strong>6</strong><p data-i18n="stimuli">stimuli in the noise-tonal preference set</p></article>
+        <article class="stat-card"><strong>0.328</strong><p data-i18n="overallMean">overall mean slider value</p></article>
+        <article class="stat-card"><strong>0.812</strong><p data-i18n="sdRatio">observed/random SD ratio across stimuli</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="figures">
+    <div class="section__inner">
+      <h2 class="section-title" data-i18n="figuresTitle">Analysis figures</h2>
+      <p class="section-copy" data-i18n="figuresCopy">
+        These plots are generated from the current analysis exports and can be replaced or expanded when the article narrative is ready.
+      </p>
+      <div class="figures-grid">
+        <figure class="figure-card">
+          <img src="{{ app_path(request, '/static/noise_tonal_preference/results/mean_slider_bootstrap_ci_by_stimulus.png') }}" alt="Mean slider with confidence intervals by stimulus">
+          <figcaption data-i18n="fig1">Mean slider value with bootstrap confidence intervals for each stimulus.</figcaption>
+        </figure>
+        <figure class="figure-card">
+          <img src="{{ app_path(request, '/static/noise_tonal_preference/results/slider_bin_distribution_by_stimulus.png') }}" alt="Slider bin distribution by stimulus">
+          <figcaption data-i18n="fig2">Distribution of responses across perceptual slider regions.</figcaption>
+        </figure>
+        <figure class="figure-card">
+          <img src="{{ app_path(request, '/static/noise_tonal_preference/results/raincloud_noise_tonal.png') }}" alt="Raincloud plot of noise tonal preference responses">
+          <figcaption data-i18n="fig3">Participant response distributions shown as raincloud plots.</figcaption>
+        </figure>
+        <figure class="figure-card">
+          <img src="{{ app_path(request, '/static/noise_tonal_preference/results/observed_vs_random_sd_by_stimulus.png') }}" alt="Observed versus random dispersion by stimulus">
+          <figcaption data-i18n="fig4">Observed dispersion compared with a random-uniform null model.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  {% include "partials/app_scripts.html" %}
+  <script>
+    const APP_BASE_PATH = "{{ app_base_path(request) }}";
+
+    function appPath(path) {
+      const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+      if (!APP_BASE_PATH) return normalizedPath;
+      return normalizedPath === "/" ? `${APP_BASE_PATH}/` : `${APP_BASE_PATH}${normalizedPath}`;
+    }
+
+    const translations = {
+      en: {
+        eyebrow: "SoundSketcher experiment showcase",
+        title: "Noise-Tonal Preference",
+        intro: "A short experiment on how listeners place noisy and tonal sound components on the vertical axis of a SoundSketcher drawing.",
+        tryDemo: "Try the real UI",
+        seeResults: "See results",
+        methodTitle: "How the data was collected",
+        methodCopy: "Participants saw a SoundSketcher visualization for each sound pair and adjusted one slider from “Noise” to “Clear tonal pitch”. The slider controlled the relative visual height of noisy versus tonal components. Space bar controlled playback, and there were no correct answers.",
+        step1Title: "1. Consent and profile",
+        step1Copy: "Participants first read the Greek instructions, gave consent, and entered basic music-background information.",
+        step2Title: "2. Six paired stimuli",
+        step2Copy: "Each trial used a stimulus folder containing one tonal and one noise audio example.",
+        step3Title: "3. Slider judgment",
+        step3Copy: "The response was a continuous 0-1 value indicating the preferred visual mapping between noise and tonal pitch.",
+        step4Title: "4. Anonymous logging",
+        step4Copy: "Responses were saved as anonymous session records for later agreement and distribution analysis.",
+        demoTitle: "Real SoundSketcher reconstruction",
+        demoCopy: "This is a non-saving showcase of the original task. Choose any of the six stimulus pairs, load the real SoundSketcher visualization, play the pair, and move the slider to redraw the mapping exactly like the experiment.",
+        chooseStimulus: "Choose one of the six stimulus pairs.",
+        loadingStimulus: "Loading the real SoundSketcher visualization...",
+        loadedStimulus: "Loaded. Use Space bar or the button to play/stop, and move the slider to resketch.",
+        playPair: "Play / stop pair",
+        loadPair: "Load pair",
+        tonalLabel: "Clear tonal pitch",
+        noiseLabel: "Noise",
+        currentValue: "Current value",
+        resultsTitle: "What the current analysis shows",
+        resultsCopy: "The existing analysis focuses on whether participants converged around shared slider regions rather than whether every stimulus received one exact value.",
+        participants: "participants in the complete-session agreement analysis",
+        stimuli: "stimuli in the noise-tonal preference set",
+        overallMean: "overall mean slider value",
+        sdRatio: "observed/random SD ratio across stimuli",
+        figuresTitle: "Analysis figures",
+        figuresCopy: "These plots are generated from the current analysis exports and can be replaced or expanded when the article narrative is ready.",
+        fig1: "Mean slider value with bootstrap confidence intervals for each stimulus.",
+        fig2: "Distribution of responses across perceptual slider regions.",
+        fig3: "Participant response distributions shown as raincloud plots.",
+        fig4: "Observed dispersion compared with a random-uniform null model.",
+        noise: "Noise",
+        tonal: "Tonal",
+      },
+      el: {
+        eyebrow: "Παρουσίαση πειράματος SoundSketcher",
+        title: "Προτίμηση Θορύβου-Τονικού Ήχου",
+        intro: "Ένα σύντομο πείραμα για το πώς οι ακροατές τοποθετούν θορυβώδη και τονικά ηχητικά στοιχεία στον κάθετο άξονα μιας γραφικής απεικόνισης.",
+        tryDemo: "Δοκιμή της πραγματικής διεπαφής",
+        seeResults: "Δείτε τα αποτελέσματα",
+        methodTitle: "Πώς συλλέχθηκαν τα δεδομένα",
+        methodCopy: "Οι συμμετέχοντες έβλεπαν μια απεικόνιση SoundSketcher για κάθε ζεύγος ήχων και ρύθμιζαν ένα slider από “Θόρυβος” έως “Καθαρό τονικό ύψος”. Το slider έλεγχε τη σχετική οπτική θέση θορυβωδών και τονικών στοιχείων. Η αναπαραγωγή γινόταν με Space bar και δεν υπήρχαν σωστές ή λάθος απαντήσεις.",
+        step1Title: "1. Συναίνεση και προφίλ",
+        step1Copy: "Οι συμμετέχοντες διάβαζαν τις οδηγίες, έδιναν συναίνεση και συμπλήρωναν βασικά στοιχεία μουσικού υπόβαθρου.",
+        step2Title: "2. Έξι ζεύγη ερεθισμάτων",
+        step2Copy: "Κάθε δοκιμή χρησιμοποιούσε έναν φάκελο ερεθίσματος με ένα τονικό και ένα θορυβώδες ηχητικό παράδειγμα.",
+        step3Title: "3. Κρίση με slider",
+        step3Copy: "Η απόκριση ήταν μια συνεχής τιμή 0-1 για την προτιμώμενη οπτική αντιστοίχιση θορύβου και τονικού ύψους.",
+        step4Title: "4. Ανώνυμη καταγραφή",
+        step4Copy: "Οι αποκρίσεις αποθηκεύονταν ως ανώνυμες εγγραφές συνεδρίας για ανάλυση συμφωνίας και κατανομής.",
+        demoTitle: "Πραγματική ανακατασκευή SoundSketcher",
+        demoCopy: "Αυτή είναι μια έκδοση παρουσίασης της αρχικής εργασίας και δεν αποθηκεύει δεδομένα. Επιλέξτε οποιοδήποτε από τα έξι ζεύγη, φορτώστε την πραγματική απεικόνιση SoundSketcher, ακούστε το ζεύγος και μετακινήστε το slider για επανασχεδίαση όπως στο πείραμα.",
+        chooseStimulus: "Επιλέξτε ένα από τα έξι ζεύγη ερεθισμάτων.",
+        loadingStimulus: "Φόρτωση της πραγματικής απεικόνισης SoundSketcher...",
+        loadedStimulus: "Φορτώθηκε. Χρησιμοποιήστε Space bar ή το κουμπί για αναπαραγωγή/παύση και μετακινήστε το slider για επανασχεδίαση.",
+        playPair: "Αναπαραγωγή / παύση ζεύγους",
+        loadPair: "Φόρτωση ζεύγους",
+        tonalLabel: "Καθαρό τονικό ύψος",
+        noiseLabel: "Θόρυβος",
+        currentValue: "Τρέχουσα τιμή",
+        resultsTitle: "Τι δείχνει η τρέχουσα ανάλυση",
+        resultsCopy: "Η υπάρχουσα ανάλυση εστιάζει στο αν οι συμμετέχοντες συγκλίνουν σε κοινές περιοχές του slider και όχι στο αν κάθε ερέθισμα έχει μία μοναδική ακριβή τιμή.",
+        participants: "συμμετέχοντες στην ανάλυση πλήρων συνεδριών",
+        stimuli: "ερεθίσματα στο σύνολο θορύβου-τονικού ήχου",
+        overallMean: "συνολική μέση τιμή slider",
+        sdRatio: "λόγος παρατηρούμενης/τυχαίας τυπικής απόκλισης",
+        figuresTitle: "Γραφήματα ανάλυσης",
+        figuresCopy: "Τα γραφήματα προέρχονται από τις τρέχουσες εξαγωγές ανάλυσης και μπορούν να αντικατασταθούν ή να επεκταθούν όταν διαμορφωθεί το άρθρο.",
+        fig1: "Μέση τιμή slider με bootstrap διαστήματα εμπιστοσύνης ανά ερέθισμα.",
+        fig2: "Κατανομή αποκρίσεων σε αντιληπτικές περιοχές του slider.",
+        fig3: "Κατανομές αποκρίσεων συμμετεχόντων σε raincloud plot.",
+        fig4: "Παρατηρούμενη διασπορά σε σύγκριση με τυχαίο ομοιόμορφο μοντέλο.",
+        noise: "Θόρυβος",
+        tonal: "Τονικό",
+      }
+    };
+
+    const showcaseState = {
+      lang: "en",
+      stimuli: [],
+      featureManifest: null,
+      loadedIndex: null,
+      isLoading: false,
+      loadToken: 0,
+      redrawTimer: null,
+    };
+
+    const stimulusList = document.getElementById("stimulusList");
+    const statusLabel = document.getElementById("realDemoStatus");
+    const playPairBtn = document.getElementById("playPairBtn");
+    const visibleSlider = document.getElementById("preference-visible-slider");
+    const visibleValue = document.getElementById("preferenceSliderValue");
+    const hiddenScDivision = document.getElementById("scdivision-slider");
+
+    function t(key) {
+      return translations[showcaseState.lang][key] || translations.en[key] || key;
+    }
+
+    function endpoint(path) {
+      return appPath(path);
+    }
+
+    function setStatus(keyOrText) {
+      if (!statusLabel) return;
+      statusLabel.textContent = translations[showcaseState.lang][keyOrText] ? t(keyOrText) : keyOrText;
+    }
+
+    function applyLanguage(lang) {
+      showcaseState.lang = lang;
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach((node) => {
+        node.textContent = t(node.dataset.i18n);
+      });
+      document.querySelectorAll("[data-lang]").forEach((button) => {
+        button.setAttribute("aria-pressed", button.dataset.lang === lang ? "true" : "false");
+      });
+      if (playPairBtn) playPairBtn.textContent = t("playPair");
+      if (showcaseState.loadedIndex === null && !showcaseState.isLoading) setStatus("chooseStimulus");
+      renderStimuli();
+    }
+
+    function renderStimuli() {
+      if (!stimulusList) return;
+      stimulusList.textContent = "";
+      showcaseState.stimuli.forEach((stimulus, index) => {
+        const card = document.createElement("article");
+        card.className = "stimulus-card";
+        card.setAttribute("aria-current", index === showcaseState.loadedIndex ? "true" : "false");
+
+        const label = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = stimulus.stimulus_id.replace("_", " ");
+        const meta = document.createElement("span");
+        meta.textContent = `${t("noise")} + ${t("tonal")}`;
+        label.append(title, meta);
+
+        const loadButton = document.createElement("button");
+        loadButton.type = "button";
+        loadButton.className = "icon-button";
+        loadButton.textContent = t("loadPair");
+        loadButton.disabled = showcaseState.isLoading;
+        loadButton.addEventListener("click", () => loadStimulus(index));
+
+        card.append(label, loadButton);
+        stimulusList.appendChild(card);
+      });
+    }
+
+    const legacyQuestionnairePreset = {
+      lineMode: {
+        features: [
+          "loudness_periodicity",
+          "loudness",
+          "yin_periodicity",
+          "loudness",
+          "yin_periodicity",
+          "mir_roughness_vassilakis",
+          "perceived_pitch_f0_or_SC_weighted"
+        ],
+        inverted: [false, true, false, true, false, false, false],
+        sliders: [
+          { id: "slider-1", min: 0, max: 100, startMin: 3, startMax: 100 },
+          { id: "slider-2", min: 0, max: 15, startMin: 2, startMax: 4 },
+          { id: "slider-3", min: 0, max: 100, startMin: 0, startMax: 100 },
+          { id: "slider-4", min: 0, max: 45, startMin: 2, startMax: 25 },
+          { id: "slider-5", min: 0, max: 800, startMin: 0, startMax: 800 },
+          { id: "slider-6", min: 0, max: 100, startMin: 40, startMax: 90 },
+          { id: "slider-7", min: 0, max: 10, startMin: 2, startMax: 6 }
+        ]
+      },
+      polygonMode: {
+        features: [
+          "loudness_periodicity",
+          "loudness",
+          "yin_periodicity",
+          "loudness",
+          "yin_periodicity",
+          "mir_roughness_vassilakis",
+          "perceived_pitch_f0_or_SC_weighted"
+        ],
+        inverted: [false, true, false, true, false, false, false],
+        sliders: [
+          { id: "slider-1", min: 3, max: 100, startMin: 3, startMax: 100 },
+          { id: "slider-2", min: 3, max: 12, startMin: 3, startMax: 8 },
+          { id: "slider-3", min: 0, max: 100, startMin: 0, startMax: 100 },
+          { id: "slider-4", min: 0, max: 45, startMin: 0, startMax: 30 },
+          { id: "slider-5", min: 0, max: 800, startMin: 0, startMax: 800 },
+          { id: "slider-6", min: 0, max: 100, startMin: 40, startMax: 90 },
+          { id: "slider-7", min: 0, max: 100, startMin: 20, startMax: 100 }
+        ]
+      },
+      globals: {
+        linePolygonMode: false,
+        objectifierMode: false,
+        thresholdCircle: false,
+        joindatapoints: false,
+        logLinear: false,
+        melScale: true,
+        toggleClamp: false,
+        toggleSoftclip: false,
+        scrollModeToggle: false
+      },
+      singles: {
+        gate: 5,
+        period: 0.75,
+        gamma: 0.14,
+        scdivision: 0.6,
+        clamp: [5, 95],
+        softclip: 5
+      }
+    };
+
+    function setChecked(id, value) {
+      const element = document.getElementById(id);
+      if (element) element.checked = value;
+    }
+
+    function applyLegacyQuestionnairePreset() {
+      const mode = document.getElementById("linePolygonMode")?.checked ? "polygonMode" : "lineMode";
+      const config = legacyQuestionnairePreset[mode];
+      const featureOrder = ["1", "2", "3", "6", "4", "7", "5"];
+
+      featureOrder.forEach((id, index) => {
+        const select = document.getElementById(`featureSelect-${id}`);
+        const wanted = config.features[index] || "none";
+        if (select && Array.from(select.options).some((option) => option.value === wanted)) {
+          select.value = wanted;
+        }
+
+        const invert = document.getElementById(`invertMapping-${id}`);
+        if (invert) invert.checked = Boolean(config.inverted[index]);
+      });
+
+      config.sliders.forEach((sliderConfig) => {
+        const slider = document.getElementById(sliderConfig.id);
+        if (!slider?.noUiSlider) return;
+        slider.noUiSlider.updateOptions({
+          range: { min: sliderConfig.min, max: sliderConfig.max },
+          start: [sliderConfig.startMin, sliderConfig.startMax]
+        }, false);
+      });
+
+      setChecked("linePolygonMode", legacyQuestionnairePreset.globals.linePolygonMode);
+      setChecked("objectifierMode", legacyQuestionnairePreset.globals.objectifierMode);
+      setChecked("thresholdCircle", legacyQuestionnairePreset.globals.thresholdCircle);
+      setChecked("joindatapoints", legacyQuestionnairePreset.globals.joindatapoints);
+      setChecked("log-linear", legacyQuestionnairePreset.globals.logLinear);
+      setChecked("mel-scale", legacyQuestionnairePreset.globals.melScale);
+      setChecked("toggleClamp", legacyQuestionnairePreset.globals.toggleClamp);
+      setChecked("toggleSoftclip", legacyQuestionnairePreset.globals.toggleSoftclip);
+      setChecked("scrollModeToggle", legacyQuestionnairePreset.globals.scrollModeToggle);
+
+      document.getElementById("slider-gate")?.noUiSlider?.set(legacyQuestionnairePreset.singles.gate, false);
+      document.getElementById("period-slider")?.noUiSlider?.set(legacyQuestionnairePreset.singles.period, false);
+      document.getElementById("gamma-slider")?.noUiSlider?.set(legacyQuestionnairePreset.singles.gamma, false);
+      document.getElementById("scdivision-slider")?.noUiSlider?.set(legacyQuestionnairePreset.singles.scdivision, false);
+      document.getElementById("slider-softclip")?.noUiSlider?.set(legacyQuestionnairePreset.singles.softclip, false);
+      document.getElementById("slider-clamp")?.noUiSlider?.set(legacyQuestionnairePreset.singles.clamp, false);
+      if (typeof updateLogLinearCheckbox === "function") updateLogLinearCheckbox();
+    }
+
+    function fitSketchToFrame() {
+      const svg = document.querySelector("#svgWrapper svg");
+      if (!svg) return;
+      const rawWidth = parseFloat(svg.getAttribute("width")) || svg.viewBox?.baseVal?.width;
+      const rawHeight = parseFloat(svg.getAttribute("height")) || svg.viewBox?.baseVal?.height;
+      if (rawWidth && rawHeight && !svg.getAttribute("viewBox")) {
+        svg.setAttribute("viewBox", `0 0 ${rawWidth} ${rawHeight}`);
+      }
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.style.width = "100%";
+      svg.style.height = "100%";
+      svg.style.display = "block";
+    }
+
+    function scheduleRedraw(delay = 80) {
+      clearTimeout(showcaseState.redrawTimer);
+      showcaseState.redrawTimer = setTimeout(() => {
+        document.getElementById("submitButton")?.click();
+        setTimeout(fitSketchToFrame, 60);
+      }, delay);
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(endpoint(url), { cache: "force-cache" });
+      if (!response.ok) throw new Error(`Could not load experiment asset: ${url}`);
+      return response.json();
+    }
+
+    function unwrapLegacyFeatures(payload) {
+      if (Array.isArray(payload)) return payload;
+      return payload?.Song?.features_per_timestamp || payload?.features || [];
+    }
+
+    async function loadFeatureManifest() {
+      if (showcaseState.featureManifest) return showcaseState.featureManifest;
+      showcaseState.featureManifest = await fetchJson("/static/noise_tonal_preference/feature_exports/manifest.json");
+      return showcaseState.featureManifest;
+    }
+
+    function buildStaticAudioData(stimulus, files, featurePayloads) {
+      return {
+        files_processed: files.length,
+        filename: files.map((file) => file.name),
+        hash: files.map((file) => file.hash),
+        audio_url: files.map((file) => file.audio_url),
+        data: featurePayloads.map((payload) => ({
+          features: unwrapLegacyFeatures(payload),
+          clusters: null,
+          cluster_labels: {},
+          deleted_regions: [],
+          region_overrides: {},
+          hidden_clusters: [],
+          only_cluster: null,
+          notes: `Legacy exported features for ${stimulus.stimulus_id}.`,
+        })),
+      };
+    }
+
+    async function loadStimulus(index) {
+      const stimulus = showcaseState.stimuli[index];
+      if (!stimulus) return;
+      const token = ++showcaseState.loadToken;
+      showcaseState.isLoading = true;
+      showcaseState.loadedIndex = index;
+      setStatus("loadingStimulus");
+      renderStimuli();
+
+      try {
+        const playback = window.SoundSketcher?.playback;
+        if (playback?.isPlaying?.()) playback.toggle();
+
+        const manifest = await loadFeatureManifest();
+        const manifestStimulus = (manifest.stimuli || []).find((item) => item.stimulus_id === stimulus.stimulus_id);
+        if (!manifestStimulus?.files?.length) throw new Error(`No feature export found for ${stimulus.stimulus_id}.`);
+
+        const files = manifestStimulus.files.map((file) => ({
+          name: `${stimulus.stimulus_id}_${file.kind}.wav`,
+          audio_url: file.audio_url,
+          hash: file.hash,
+          kind: file.kind,
+        }));
+        const featurePayloads = await Promise.all(manifestStimulus.files.map((file) => fetchJson(file.features_url)));
+        const visualizationClient = await window.SoundSketcher.whenAudioClient("visualize");
+        if (token !== showcaseState.loadToken) return;
+
+        const data = buildStaticAudioData(stimulus, files, featurePayloads);
+        window.SoundSketcher.state.globalAudioData = data;
+        window.SoundSketcher.state.globalFile = files;
+        applyLegacyQuestionnairePreset();
+
+        await visualizationClient.visualizeAllFiles(files);
+        if (token !== showcaseState.loadToken) return;
+        applyLegacyQuestionnairePreset();
+        setStatus("loadedStimulus");
+
+        if (visibleSlider?.noUiSlider && hiddenScDivision?.noUiSlider) {
+          const value = Number(visibleSlider.noUiSlider.get());
+          hiddenScDivision.noUiSlider.set(value, false);
+          scheduleRedraw(40);
+        }
+      } catch (error) {
+        console.error(error);
+        setStatus(error.message || "Could not load stimulus.");
+      } finally {
+        if (token === showcaseState.loadToken) {
+          showcaseState.isLoading = false;
+          renderStimuli();
+        }
+      }
+    }
+
+    async function loadStimuli() {
+      try {
+        const manifest = await loadFeatureManifest();
+        showcaseState.stimuli = (manifest.stimuli || []).sort((a, b) => a.stimulus_id.localeCompare(b.stimulus_id));
+        renderStimuli();
+        if (showcaseState.stimuli.length) setTimeout(() => loadStimulus(0), 100);
+      } catch (error) {
+        setStatus(error.message || "Could not load stimuli.");
+      }
+    }
+
+    document.querySelectorAll("[data-lang]").forEach((button) => {
+      button.addEventListener("click", () => applyLanguage(button.dataset.lang));
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (visibleSlider && !visibleSlider.noUiSlider) {
+        noUiSlider.create(visibleSlider, {
+          start: 1.0,
+          connect: [true, false],
+          range: { min: 0, max: 1 },
+          step: 0.01
+        });
+
+        visibleSlider.noUiSlider.on("update", (values) => {
+          const value = Number(values[0]);
+          visibleValue.textContent = value.toFixed(2);
+          hiddenScDivision?.noUiSlider?.set(value, false);
+          if (window.SoundSketcher?.state?.globalAudioData) scheduleRedraw(120);
+        });
+
+        visibleSlider.noUiSlider.on("change", (values) => {
+          hiddenScDivision?.noUiSlider?.set(Number(values[0]), false);
+          if (window.SoundSketcher?.state?.globalAudioData) scheduleRedraw(20);
+        });
+      }
+
+      applyLegacyQuestionnairePreset();
+      hiddenScDivision?.noUiSlider?.set(1.0, false);
+      playPairBtn?.addEventListener("click", () => window.SoundSketcher?.playback?.toggle?.());
+      applyLanguage("en");
+      loadStimuli();
+    });
+  </script>
+</body>
+</html>

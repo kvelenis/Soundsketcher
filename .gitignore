@@ -1,0 +1,28 @@
+# Environment
+.env
+.env.*
+!.env.staging.example
+.env.local
+.env.staging
+.env.production
+.env.*.local
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Runtime/generated data
+runtime/
+user_data/
+static_uploads/
+
+# OS/logs
+.DS_Store
+*.log
+

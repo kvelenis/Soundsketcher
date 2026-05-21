@@ -1,0 +1,240 @@
+.question-mark {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 20px;
+    text-align: center;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    display: none;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    user-select: text;
+}
+
+.modal-content {
+    position: relative;
+    width: 50%;
+    margin: auto;
+    padding: 20px;
+    border-radius: 5px;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-list {
+    text-align: left;
+}
+
+.modal-heading {
+    margin-bottom: 20px;
+    color: #005f73;
+    font-size: 24px;
+    text-align: center;
+}
+
+.modal-heading-h3 {
+    text-align: left;
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.sonificators-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.granulator_container {
+    flex: 1;
+}
+
+.waveform-container {
+    position: relative;
+    width: 100%;
+    height: 100px;
+    margin: 10px auto;
+    border: 2px dashed #ccc;
+    background: #f0f0f0;
+    cursor: pointer;
+}
+
+.waveform-container:hover,
+.waveform-container.solid {
+    border-style: solid;
+}
+
+#waveformCanvas,
+#waveform-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#waveform-text {
+    position: absolute;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: black;
+}
+
+.granular-sample-status {
+    min-height: 18px;
+    margin: -2px 0 10px;
+    color: #555;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.granular-sample-status.is-loaded {
+    color: #287a55;
+    font-weight: 600;
+}
+
+.granular-sample-status.is-error {
+    color: #a7111e;
+    font-weight: 600;
+}
+
+.granular-action-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.file-upload-container {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+#audioFileInput {
+    display: none;
+}
+
+.custom-file-upload {
+    display: inline-block;
+    width: 100%;
+    padding: 10px 20px;
+    border-radius: 5px;
+    background-color: #7dd2d4;
+    color: #000;
+    cursor: pointer;
+    font-size: 16px;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.custom-file-upload i {
+    margin-right: 8px;
+}
+
+.custom-file-upload:hover {
+    background-color: #68a5a6;
+}
+
+.waveform-selector {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+}
+
+.arrow-button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: rgba(255, 0, 0, 0);
+    color: #000;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: background-color 0.3s ease;
+}
+
+.waveform-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.waveform-display img {
+    width: 150px;
+    height: auto;
+    margin-bottom: 5px;
+}
+
+.waveform-display span {
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.synth-button {
+    width: 40%;
+    margin-right: 10px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    background-color: #7dd2d4;
+    color: #000;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.synth-button:hover {
+    background-color: #68a5a6;
+    color: #000;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+}
+
+.knob-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 20px;
+}
+
+#scaleKnob {
+    width: 120px;
+    height: 120px;
+}

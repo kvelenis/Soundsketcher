@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SoundSketcher Sandbox</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18212f;
+      --muted: #657184;
+      --line: #d7dde6;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: calc(100vh - 65px);
+    }
+    aside {
+      padding: 18px;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+    }
+    section {
+      padding: 18px;
+      min-width: 0;
+    }
+    label {
+      display: block;
+      margin: 14px 0 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    select,
+    input[type="file"],
+    button {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    select,
+    input[type="file"] {
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 14px;
+      min-height: 42px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+    .surface {
+      width: 100%;
+      height: min(72vh, 720px);
+      border: 1px solid var(--line);
+      background: #ffffff;
+      overflow: auto;
+    }
+    svg {
+      display: block;
+      min-width: 900px;
+      width: 100%;
+      height: 100%;
+    }
+    .meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #fff;
+    }
+    @media (max-width: 820px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SoundSketcher Sandbox</h1>
+    <div class="meta">
+      <span class="pill">minimal feature set</span>
+      <span class="pill">spectral centroid · pitch · rms</span>
+    </div>
+  </header>
+  <main>
+    <aside>
+      <label for="cachedFiles">Cached Audio</label>
+      <select id="cachedFiles">
+        <option value="">Loading cached files…</option>
+      </select>
+      <button id="loadCached">Load cached file</button>
+
+      <label for="audioFile">Upload Audio</label>
+      <input id="audioFile" type="file" accept="audio/*">
+      <button id="uploadAudio">Upload and sketch</button>
+
+      <label for="yFeature">Y Feature</label>
+      <select id="yFeature">
+        <option value="spectral_centroid">Spectral centroid</option>
+        <option value="f0_librosa">Pitch (librosa)</option>
+        <option value="rms">RMS</option>
+        <option value="loudness">Loudness proxy</option>
+      </select>
+
+      <label for="colorFeature">Color Feature</label>
+      <select id="colorFeature">
+        <option value="rms">RMS</option>
+        <option value="loudness">Loudness proxy</option>
+        <option value="f0_librosa">Pitch (librosa)</option>
+        <option value="spectral_centroid">Spectral centroid</option>
+      </select>
+
+      <button class="secondary" id="redraw">Redraw</button>
+      <div class="status" id="status">Ready.</div>
+    </aside>
+    <section>
+      <div class="meta" id="summary"></div>
+      <div class="surface">
+        <svg id="sketch" viewBox="0 0 1200 620" preserveAspectRatio="none" role="img" aria-label="Sound sketch"></svg>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      payload: null,
+      selected: null,
+    };
+
+    const el = {
+      cachedFiles: document.getElementById("cachedFiles"),
+      loadCached: document.getElementById("loadCached"),
+      audioFile: document.getElementById("audioFile"),
+      uploadAudio: document.getElementById("uploadAudio"),
+      yFeature: document.getElementById("yFeature"),
+      colorFeature: document.getElementById("colorFeature"),
+      redraw: document.getElementById("redraw"),
+      status: document.getElementById("status"),
+      summary: document.getElementById("summary"),
+      sketch: document.getElementById("sketch"),
+    };
+
+    function setStatus(message) {
+      el.status.textContent = message;
+    }
+
+    async function fetchJson(url, options) {
+      const response = await fetch(url, options);
+      const text = await response.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(`${url} returned non-JSON response`);
+      }
+      if (!response.ok) {
+        throw new Error(data.error || data.Error || `${url} failed with ${response.status}`);
+      }
+      return data;
+    }
+
+    async function loadCachedList() {
+      const data = await fetchJson("/list_cached_files");
+      el.cachedFiles.innerHTML = "";
+      if (!data.cached_files || data.cached_files.length === 0) {
+        const option = new Option("No cached files yet", "");
+        el.cachedFiles.add(option);
+        setStatus("No cached files yet. Upload a WAV/MP3 to create one.");
+        return;
+      }
+      for (const item of data.cached_files) {
+        const option = new Option(item.filename, JSON.stringify(item));
+        el.cachedFiles.add(option);
+      }
+      setStatus(`Found ${data.cached_files.length} cached file(s).`);
+    }
+
+    async function loadSelectedCached() {
+      if (!el.cachedFiles.value) {
+        setStatus("No cached file selected.");
+        return;
+      }
+      const item = JSON.parse(el.cachedFiles.value);
+      const form = new URLSearchParams();
+      form.set("filename", item.filename);
+      form.set("hash", item.hash);
+      const data = await fetchJson("/load_cached_audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+      });
+      state.payload = data;
+      state.selected = item;
+      setStatus(`Loaded ${item.filename}.`);
+      draw();
+    }
+
+    async function uploadAudio() {
+      const file = el.audioFile.files[0];
+      if (!file) {
+        setStatus("Choose an audio file first.");
+        return;
+      }
+      const form = new FormData();
+      form.append("audio_files", file);
+      const data = await fetchJson("/upload_wavs", {
+        method: "POST",
+        body: form,
+      });
+      state.payload = data;
+      state.selected = {
+        filename: data.filename?.[0] || file.name,
+        hash: data.hash?.[0],
+        audio_url: data.audio_url?.[0],
+      };
+      setStatus(`Uploaded and sketched ${state.selected.filename}.`);
+      await loadCachedList();
+      draw();
+    }
+
+    function getFeatureRows() {
+      const rows = state.payload?.data?.[0]?.features || [];
+      return rows.filter(row => Number.isFinite(Number(row.timestamp)));
+    }
+
+    function extent(rows, key) {
+      const values = rows.map(row => Number(row[key])).filter(Number.isFinite);
+      if (!values.length) return [0, 1];
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      return min === max ? [min, min + 1] : [min, max];
+    }
+
+    function scale(value, min, max, outMin, outMax) {
+      const n = (Number(value) - min) / (max - min || 1);
+      return outMin + Math.max(0, Math.min(1, n)) * (outMax - outMin);
+    }
+
+    function draw() {
+      const rows = getFeatureRows();
+      el.sketch.innerHTML = "";
+      if (!rows.length) {
+        el.summary.innerHTML = "";
+        setStatus("No feature rows available to draw.");
+        return;
+      }
+
+      const yKey = el.yFeature.value;
+      const colorKey = el.colorFeature.value;
+      const [timeMin, timeMax] = extent(rows, "timestamp");
+      const [yMin, yMax] = extent(rows, yKey);
+      const [cMin, cMax] = extent(rows, colorKey);
+      const width = 1200;
+      const height = 620;
+      const pad = 46;
+
+      const points = rows.map(row => {
+        const x = scale(row.timestamp, timeMin, timeMax, pad, width - pad);
+        const y = scale(row[yKey], yMin, yMax, height - pad, pad);
+        const c = scale(row[colorKey], cMin, cMax, 30, 220);
+        return { x, y, c, row };
+      });
+
+      const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      bg.setAttribute("x", "0");
+      bg.setAttribute("y", "0");
+      bg.setAttribute("width", width);
+      bg.setAttribute("height", height);
+      bg.setAttribute("fill", "#ffffff");
+      el.sketch.appendChild(bg);
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", points.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" "));
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "var(--accent)");
+      path.setAttribute("stroke-width", "3");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      el.sketch.appendChild(path);
+
+      for (const p of points) {
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", p.x);
+        circle.setAttribute("cy", p.y);
+        circle.setAttribute("r", scale(p.row.rms || p.row.loudness || 0, 0, Math.max(...rows.map(r => Number(r.rms || r.loudness || 0))), 3, 12));
+        circle.setAttribute("fill", `rgb(${Math.round(p.c)}, ${Math.round(180 - p.c / 4)}, ${Math.round(120 + p.c / 3)})`);
+        circle.setAttribute("opacity", "0.75");
+        el.sketch.appendChild(circle);
+      }
+
+      el.summary.innerHTML = `
+        <span class="pill">${state.selected?.filename || "audio"}</span>
+        <span class="pill">${rows.length} frames</span>
+        <span class="pill">Y: ${yKey}</span>
+        <span class="pill">Color: ${colorKey}</span>
+      `;
+      setStatus("Sketch drawn successfully.");
+    }
+
+    el.loadCached.addEventListener("click", () => loadSelectedCached().catch(error => setStatus(error.message)));
+    el.uploadAudio.addEventListener("click", () => uploadAudio().catch(error => setStatus(error.message)));
+    el.redraw.addEventListener("click", draw);
+    el.yFeature.addEventListener("change", draw);
+    el.colorFeature.addEventListener("change", draw);
+
+    loadCachedList().catch(error => setStatus(error.message));
+  </script>
+</body>
+</html>

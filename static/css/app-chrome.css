@@ -1,0 +1,179 @@
+#drop_area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 80vh;
+    margin: 20px auto;
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.2em;
+    line-height: 200px;
+    text-align: center;
+}
+
+#drop_area:hover,
+#drop_area.solid {
+    border-style: solid;
+}
+
+.audio-player__container {
+    display: flex;
+    margin: auto;
+}
+
+#audioPlayer {
+    margin: 20px auto;
+}
+
+.path-animation-1 {
+    animation: dash-1 100s linear infinite;
+    stroke-dasharray: 5;
+}
+
+.path-animation-2 {
+    animation: dash-2 80s ease-in-out infinite;
+    stroke-dasharray: 2;
+}
+
+.path-animation-3 {
+    animation: dash-3 60s ease infinite;
+    stroke-dasharray: 13;
+}
+
+@keyframes dash-1 {
+    to {
+        stroke-dashoffset: 1000;
+    }
+}
+
+@keyframes dash-2 {
+    to {
+        stroke-dashoffset: 1500;
+    }
+}
+
+@keyframes dash-3 {
+    to {
+        stroke-dashoffset: 800;
+    }
+}
+
+.svg-drag-select-area-overlay {
+    border: 1px dotted gray;
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+[data-selected] {
+    fill: yellow;
+    stroke: blue;
+}
+
+.spinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 1050;
+    width: 40px;
+    height: 40px;
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.feature-progress-status {
+    position: fixed;
+    top: calc(50% + 44px);
+    left: 50%;
+    z-index: 1060;
+    box-sizing: border-box;
+    width: min(420px, calc(100vw - 32px));
+    padding: 9px 12px;
+    border: 1px solid #b9d4eb;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    color: #23527a;
+    font-size: 0.88rem;
+    line-height: 1.25;
+    transform: translateX(-50%);
+}
+
+.feature-progress-status.app-hidden {
+    display: none;
+}
+
+.feature-progress-status__spinner {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #d8e8f6;
+    border-top-color: #3f7fb5;
+    border-radius: 50%;
+    animation: feature-progress-spin 0.9s linear infinite;
+}
+
+@keyframes feature-progress-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+.zoom-animation {
+    animation: zoom 0.3s ease-in-out;
+    transform-origin: center;
+}
+
+@keyframes zoom {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.toggle-button {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.toggle-button img {
+    display: block;
+}
+
+#playStopButton img:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+.tooltip {
+    position: absolute;
+    z-index: 10;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 12px;
+    pointer-events: none;
+    white-space: nowrap;
+}

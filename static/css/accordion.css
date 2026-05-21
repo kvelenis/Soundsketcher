@@ -1,0 +1,23 @@
+.accordion-content {
+    display: none;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.accordion-content.open {
+    display: block;
+}
+
+.accordion-header {
+    padding: 20px;
+    border-bottom: unset;
+    border-radius: 4px;
+    background-color: #7dd2d4;
+    color: #000;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.accordion-header:hover {
+    background-color: #68a5a6;
+}

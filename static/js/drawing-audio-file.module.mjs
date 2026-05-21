@@ -1,0 +1,148 @@
+import {
+    buildDrawingFileContext,
+    buildVisualFrameOptions,
+} from "./drawing-file-context.module.mjs?v=frontend-migration-123";
+import {
+    finalizeDrawingFile,
+} from "./drawing-file-finalizer.module.mjs?v=frontend-migration-129";
+import {
+    processDrawingFeatureFrame,
+} from "./drawing-feature-frame.module.mjs?v=frontend-migration-126";
+
+export function processDrawingAudioFile({
+    audioData,
+    fileIndex,
+    profiler,
+    pathData,
+    configurations,
+    svgContainer,
+    defs,
+    isObjectifyEnabled,
+    maxDuration,
+    canvasWidth,
+    canvasHeight,
+    padding,
+    minValue,
+    maxValue,
+    selectedFeature1,
+    selectedFeature2,
+    selectedFeature3,
+    selectedFeature4,
+    selectedFeature5,
+    selectedFeature6,
+    selectedFeature7,
+    isInverted_y_axis,
+    isInverted_angle,
+    scale,
+    isSoftclipEnabled,
+    softclipScale,
+    startRange_lineLength,
+    endRange_lineLength,
+    startRange_lineWidth,
+    endRange_lineWidth,
+    startRange_colorSaturation,
+    endRange_colorSaturation,
+    startRange_colorLightness,
+    endRange_colorLightness,
+    startRange_angle,
+    endRange_angle,
+    startRange_dashArray,
+    endRange_dashArray,
+    isThresholdCircleEnabled,
+    isJoinPathsEnabled,
+    isLineSketchingEnabled,
+    isPolygonEnabled,
+    rawFeatureNames,
+    visibleFeatureNames,
+    clampConfig,
+}) {
+    profiler.count("audio files");
+    const fileContext = buildDrawingFileContext(fileIndex, {
+        featureConfig: configurations[fileIndex],
+        isObjectifyEnabled,
+        pathData,
+    });
+    let { previousDots } = fileContext;
+    const {
+        pathGroup,
+        featureConfig,
+        colorHue,
+        hue1,
+        hue2,
+        loudness_threshold,
+    } = fileContext;
+    const visualFrameOptions = buildVisualFrameOptions({
+        maxDuration,
+        canvasWidth,
+        canvasHeight,
+        padding,
+        minValue,
+        maxValue,
+        selectedFeature1,
+        selectedFeature2,
+        selectedFeature3,
+        selectedFeature4,
+        selectedFeature5,
+        selectedFeature6,
+        selectedFeature7,
+        isInverted_y_axis,
+        isInverted_angle,
+        scale,
+        isSoftclipEnabled,
+        softclipScale,
+        startRange_lineLength,
+        endRange_lineLength,
+        startRange_lineWidth,
+        endRange_lineWidth,
+        startRange_colorSaturation,
+        endRange_colorSaturation,
+        startRange_colorLightness,
+        endRange_colorLightness,
+        startRange_angle,
+        endRange_angle,
+        startRange_dashArray,
+        endRange_dashArray,
+    });
+
+    for (let i = 0; i < audioData.features.length; i++)
+    {
+        const feature = audioData.features[i];
+        previousDots = processDrawingFeatureFrame({
+            feature,
+            profiler,
+            featureConfig,
+            visualFrameOptions,
+            isObjectifyEnabled,
+            pathData,
+            fileIndex,
+            pathGroup,
+            defs,
+            colorHue,
+            hue1,
+            hue2,
+            loudness_threshold,
+            previousDots,
+            isThresholdCircleEnabled,
+            isJoinPathsEnabled,
+            isLineSketchingEnabled,
+            isPolygonEnabled,
+            rawFeatureNames,
+            visibleFeatureNames,
+            isSoftclipEnabled,
+            clampConfig,
+            softclipScale,
+        });
+    }
+
+    finalizeDrawingFile({
+        audioData,
+        fileIndex,
+        profiler,
+        svgContainer,
+        pathGroup,
+        canvasWidth,
+        canvasHeight,
+        maxDuration,
+        isObjectifyEnabled,
+    });
+}

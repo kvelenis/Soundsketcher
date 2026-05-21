@@ -1,0 +1,55 @@
+.range-slider-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20%;
+}
+
+.range-slider {
+    width: 100%;
+    height: 12px;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 200px;
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+.noUi-tooltip {
+    display: none;
+}
+
+.noUi-active .noUi-tooltip {
+    display: block;
+}
+
+.noUi-horizontal .noUi-handle {
+    top: -3px;
+    right: -10px;
+    width: 17px;
+    height: 17px;
+}
+
+.noUi-handle::after,
+.noUi-handle::before {
+    position: absolute;
+    top: 3px;
+    left: 2px;
+    display: block;
+    width: 1px;
+    height: 9px;
+    background: #e8e7e6;
+    content: "";
+}
+
+.noUi-handle::after {
+    left: 11px;
+}
+
+.disabled-slider {
+    opacity: 0.5;
+    pointer-events: none;
+}

@@ -1,0 +1,35 @@
+{
+  "name": "soundsketcher-refactor-sandbox",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Node browser QA dependencies and scripts for the SoundSketcher refactor sandbox.",
+  "scripts": {
+    "qa:drawing": "scripts/run_python.sh scripts/qa_drawing_boundary.py",
+    "qa:drawing:static": "scripts/run_python.sh scripts/qa_drawing_boundary.py --skip-browser --in-process",
+    "qa:line": "scripts/run_python.sh scripts/qa_line_drawing_fixture.py",
+    "qa:polygon": "scripts/run_python.sh scripts/qa_polygon_drawing_fixture.py",
+    "qa:objectifier": "scripts/run_python.sh scripts/qa_objectifier_drawing_fixture.py",
+    "qa:objectifier:service": "scripts/run_python.sh scripts/qa_objectifier_service.py",
+    "qa:objectifier:jobs": "scripts/run_python.sh scripts/qa_objectifier_background_jobs.py",
+    "qa:objectifier:async": "scripts/run_python.sh scripts/qa_objectifier_async_routes.py",
+    "qa:objectifier:fast-mode": "scripts/run_python.sh scripts/qa_objectifier_fast_mode.py",
+    "qa:objectifier:missing": "scripts/run_python.sh scripts/qa_objectifier_missing_status.py",
+    "qa:objectifier:ready": "scripts/run_python.sh scripts/qa_objectifier_ready_action.py",
+    "qa:feature-status": "scripts/run_python.sh scripts/qa_feature_extraction_status_fixture.py",
+    "qa:controls": "scripts/run_python.sh scripts/qa_control_response_fixture.py",
+    "qa:settings": "scripts/run_python.sh scripts/qa_settings_env.py",
+    "qa:staging-profile": "scripts/run_python.sh scripts/qa_staging_profile.py",
+    "qa:frontend": "scripts/run_python.sh scripts/qa_frontend_runtime_boundary.py",
+    "qa:parity": "scripts/run_python.sh scripts/qa_legacy_parity.py",
+    "qa:fixture": "scripts/run_python.sh scripts/qa_full_ui_fixture.py",
+    "qa:indefinite-pitch": "scripts/run_python.sh scripts/qa_indefinite_pitch_showcase.py",
+    "qa:public-smoke": "scripts/run_python.sh scripts/qa_public_deployment_smoke.py",
+    "qa:sonification": "scripts/run_python.sh scripts/qa_sonification_module_boundary.py",
+    "qa:browser": "npm run qa:drawing && npm run qa:line && npm run qa:polygon && npm run qa:objectifier && npm run qa:objectifier:missing && npm run qa:objectifier:ready && npm run qa:feature-status && npm run qa:controls",
+    "qa:all": "npm run qa:settings && npm run qa:staging-profile && npm run qa:drawing:static && npm run qa:frontend && npm run qa:parity && npm run qa:fixture && npm run qa:indefinite-pitch && npm run qa:sonification && npm run qa:objectifier:service && npm run qa:objectifier:jobs && npm run qa:objectifier:fast-mode && npm run qa:line && npm run qa:polygon && npm run qa:objectifier && npm run qa:objectifier:missing && npm run qa:objectifier:ready && npm run qa:feature-status && npm run qa:controls",
+    "qa:readiness": "scripts/run_python.sh scripts/qa_deployment_readiness.py"
+  },
+  "devDependencies": {
+    "playwright": "^1.52.0"
+  }
+}

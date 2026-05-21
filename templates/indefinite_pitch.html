@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Indefinite-Pitch Sounds | SoundSketcher</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #15171c;
+      --muted: #616a76;
+      --line: #d9dee7;
+      --paper: #f6f7f9;
+      --panel: #ffffff;
+      --blue: #2f5f98;
+      --green: #2c7a62;
+      --gold: #a66d18;
+      --danger: #a63a3a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .showcase {
+      width: min(1220px, calc(100% - 48px));
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    .player {
+      min-height: auto;
+      padding: clamp(18px, 3vw, 42px);
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 22px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .context {
+      min-height: auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      background: transparent;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--green);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .language-switch {
+      display: inline-flex;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .language-switch button {
+      min-width: 48px;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      cursor: pointer;
+      font-weight: 760;
+    }
+
+    .language-switch button:last-child {
+      border-right: 0;
+    }
+
+    .language-switch button[aria-pressed="true"] {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 860px;
+      font-size: clamp(2.1rem, 5vw, 5.2rem);
+      line-height: 0.94;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.55;
+    }
+
+    .lead {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.7vw, 1.2rem);
+    }
+
+    .transport {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      align-items: start;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fafbfc;
+    }
+
+    .transport-main {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .play-button {
+      width: min(180px, 100%);
+      min-height: 54px;
+      align-self: start;
+      border: 1px solid #111;
+      border-radius: 8px;
+      background: #111;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .play-button[data-playing="true"] {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .sound-title {
+      min-height: 1.4em;
+      font-size: 1.18rem;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .match-panel {
+      display: grid;
+      gap: 12px;
+      padding-top: 8px;
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: auto minmax(180px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    .tone-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: minmax(140px, auto) minmax(160px, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .control-readout {
+      min-width: 48px;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-weight: 720;
+      text-align: right;
+    }
+
+    .button {
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 720;
+    }
+
+    .button:hover {
+      border-color: #9aa5b4;
+    }
+
+    .button.primary {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .button.ghost {
+      background: transparent;
+    }
+
+    .frequency-readout {
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      font-weight: 780;
+    }
+
+    .no-match-button[aria-pressed="true"] {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+
+    .loop-button[aria-pressed="true"] {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .slider-locked {
+      opacity: 0.5;
+    }
+
+    .browser {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .browser-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .segmented {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .segmented button {
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      cursor: pointer;
+      font-weight: 720;
+    }
+
+    .segmented button:last-child {
+      border-right: 0;
+    }
+
+    .segmented button[aria-pressed="true"] {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .sound-grid {
+      min-height: 260px;
+      overflow: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+      align-content: start;
+      padding: 2px;
+    }
+
+    .sound-card {
+      min-height: 84px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      text-align: left;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+
+    .sound-card[aria-current="true"] {
+      border-color: var(--green);
+      box-shadow: inset 0 0 0 2px rgba(44, 122, 98, 0.16);
+    }
+
+    .sound-card-select {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .sound-card-top {
+      display: flex;
+      gap: 8px;
+      align-items: start;
+      justify-content: space-between;
+    }
+
+    .stimulus-code {
+      min-width: 42px;
+      padding: 4px 7px;
+      border-radius: 6px;
+      background: #eef5f2;
+      color: var(--green);
+      font-size: 0.78rem;
+      font-weight: 820;
+      text-align: center;
+      text-transform: lowercase;
+    }
+
+    .sound-card-title {
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    .sound-card-kind {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .bin-plot-link {
+      display: block;
+      padding: 9px 12px;
+      border-top: 1px solid var(--line);
+      background: #fafbfc;
+      color: var(--blue);
+      font-size: 0.82rem;
+      font-weight: 720;
+      text-decoration: none;
+    }
+
+    .bin-plot-link:hover {
+      background: #f0f4f8;
+    }
+
+    .context-section {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      min-height: 82px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.55rem;
+      line-height: 1;
+      color: var(--blue);
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .finding-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .finding-list li {
+      padding-left: 16px;
+      border-left: 3px solid var(--green);
+      color: #29313a;
+      line-height: 1.5;
+    }
+
+    .method-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #29313a;
+      line-height: 1.5;
+    }
+
+    .method-list li + li {
+      margin-top: 8px;
+    }
+
+    .figure-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .figure-card {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .figure-card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: #fff;
+    }
+
+    .figure-card figcaption {
+      padding: 10px 12px;
+      color: #29313a;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      border-top: 1px solid var(--line);
+    }
+
+    .citation {
+      display: grid;
+      gap: 10px;
+      color: #29313a;
+      font-size: 0.94rem;
+    }
+
+    .citation-title {
+      font-weight: 780;
+    }
+
+    .notice {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 980px) {
+      .play-button {
+        width: 100%;
+        min-height: 54px;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .showcase {
+        width: min(100% - 24px, 1220px);
+      }
+
+      .context {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="{{ sandbox_static_path(request, 'css/experiment-showcase.css') }}?v=showcase-typography-1">
+</head>
+<body>
+  <nav class="experiment-topnav" aria-label="SoundSketcher experiment pages">
+    <a href="{{ app_path(request, '/') }}">App</a>
+    <a href="{{ app_path(request, '/experiments') }}">Experiments</a>
+    <a href="{{ app_path(request, '/indefinite_pitch') }}" aria-current="page">Indefinite pitch</a>
+    <a href="{{ app_path(request, '/noise_tonal_preference') }}#demo">Noise-tonal</a>
+  </nav>
+  <main class="showcase">
+    <section class="player" aria-label="Indefinite-pitch stimulus player">
+      <div class="top-row">
+        <div>
+          <p class="eyebrow" data-i18n="eyebrow">SoundSketcher experiment showcase</p>
+          <h1 data-i18n="title">Indefinite-Pitch Sounds</h1>
+        </div>
+        <div class="language-switch" role="group" aria-label="Language">
+          <button id="englishButton" type="button" aria-pressed="true">EN</button>
+          <button id="greekButton" type="button" aria-pressed="false">EL</button>
+        </div>
+      </div>
+
+      <p class="lead" data-i18n="lead">
+        A listening task for sounds that do not offer a stable fundamental frequency:
+        noise bands, clusters, environmental textures, and other sounds whose pitch
+        height is perceptually real but acoustically ambiguous.
+      </p>
+
+      <div class="transport" aria-live="polite">
+        <button class="play-button" id="playStimulus" type="button" data-playing="false">Play</button>
+        <div class="transport-main">
+          <div>
+            <div class="sound-title" id="currentSoundTitle">Loading sounds...</div>
+            <div class="meta-row">
+              <span class="pill" id="currentSetLabel">Study set</span>
+              <span class="pill" id="currentIndexLabel">0 of 0</span>
+            </div>
+          </div>
+
+          <div class="match-panel">
+            <h2 data-i18n="matchTitle">Sinusoidal match</h2>
+            <div class="tone-actions">
+              <button class="button loop-button" id="loopToggle" type="button" aria-pressed="false" data-i18n="loopOff">Loop: OFF</button>
+            </div>
+            <div class="slider-row">
+              <span>40 Hz</span>
+              <input id="frequencySlider" type="range" min="0" max="1000" value="480" step="1" aria-label="Sine tone frequency">
+              <span>6000 Hz</span>
+            </div>
+            <div class="tone-actions">
+              <button class="button primary" id="playTone" type="button" data-i18n="playSine">Play sine</button>
+              <button class="button no-match-button" id="noMatch" type="button" aria-pressed="false" data-i18n="noMatch">I cannot find a match</button>
+              <button class="button" id="stopAll" type="button" data-i18n="stop">Stop</button>
+              <span class="frequency-readout" id="frequencyReadout">440 Hz</span>
+            </div>
+            <div class="control-row">
+              <label for="sineVolume" data-i18n="sineVolume">Sine volume</label>
+              <input id="sineVolume" type="range" min="0" max="100" value="80" step="1">
+              <span class="control-readout" id="sineVolumeReadout">80%</span>
+            </div>
+            <p class="notice" data-i18n="sliderHint">Hold the slider to hear the sine tone, then release to stop it.</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="browser" aria-label="Stimulus browser">
+        <div class="browser-head">
+          <h2 data-i18n="stimuli">Stimuli</h2>
+          <div class="segmented" role="group" aria-label="Sound set">
+            <button id="trainingSetButton" type="button" aria-pressed="false" data-i18n="training">Training</button>
+            <button id="studySetButton" type="button" aria-pressed="true" data-i18n="study">Study</button>
+          </div>
+        </div>
+        <div class="sound-grid" id="soundGrid"></div>
+      </section>
+    </section>
+
+    <aside class="context" aria-label="Publication context">
+      <section class="context-section">
+        <h2 data-i18n="publicationContext">Publication Context</h2>
+        <div class="citation">
+          <div class="citation-title">Beyond fundamental frequency: Pitch height judgments in Indefinite-Pitch sounds</div>
+          <div>Konstantinos Velenis, Asteris Zacharakis, and Emilios Cambouropoulos</div>
+          <div>JASA Express Letters, 2026. DOI: <a href="https://doi.org/10.1121/10.0043569" target="_blank" rel="noopener">10.1121/10.0043569</a></div>
+        </div>
+      </section>
+
+      <section class="context-section">
+        <h2 data-i18n="studySnapshot">Study Snapshot</h2>
+        <div class="stats">
+          <div class="stat">
+            <strong>48</strong>
+            <span data-i18n="listeners">listeners</span>
+          </div>
+          <div class="stat">
+            <strong>19</strong>
+            <span data-i18n="nonHarmonicSounds">non-harmonic sounds</span>
+          </div>
+          <div class="stat">
+            <strong>1</strong>
+            <span data-i18n="taskStat">sinusoidal adjustment task</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="context-section">
+        <h2 data-i18n="methodology">Methodology</h2>
+        <ul class="method-list">
+          <li data-i18n="method1">Participants first used three training examples to learn the interface and set a comfortable listening level.</li>
+          <li data-i18n="method2">For each study sound, they adjusted a sine tone until it matched the perceived pitch height of the sound.</li>
+          <li data-i18n="method3">When no convincing pitch match was available, they could mark the trial as no match.</li>
+        </ul>
+      </section>
+
+      <section class="context-section">
+        <h2 data-i18n="coreFindings">Core Findings</h2>
+        <ul class="finding-list">
+          <li data-i18n="finding1">Listeners can make reliable pitch-height distinctions even when periodic cues are weak or absent.</li>
+          <li data-i18n="finding2">A loudness-weighted spectral centroid is a useful predictor of perceived pitch height in these sounds.</li>
+          <li data-i18n="finding3">Sounds with greater spectrotemporal variability tend to produce less accurate or more dispersed matches.</li>
+        </ul>
+      </section>
+
+      <section class="context-section">
+        <h2 data-i18n="resultFigures">Result Figures</h2>
+        <div class="figure-grid">
+          <figure class="figure-card">
+            <img src="{{ app_path(request, '/static/indefinite_pitch/results/boxplot_per_sound_vertical.png') }}" alt="Pitch matches per sound">
+            <figcaption data-i18n="figureCaption1">Distribution of listener pitch matches per stimulus, highlighting agreement and dispersion across sounds.</figcaption>
+          </figure>
+          <figure class="figure-card">
+            <img src="{{ app_path(request, '/static/indefinite_pitch/results/Figure1_centroid_vs_pitch_errorbars_labeled.png') }}" alt="Spectral centroid versus perceived pitch with stimulus labels">
+            <figcaption data-i18n="figureCaption2">Stimulus-level pitch judgments against spectral centroid, with compact stimulus labels.</figcaption>
+          </figure>
+          <figure class="figure-card">
+            <img src="{{ app_path(request, '/static/indefinite_pitch/results/loudness_centroid_vs_pitch.png') }}" alt="Perceived pitch versus loudness-weighted spectral centroid">
+            <figcaption data-i18n="figureCaption3">Median perceived pitch height plotted against loudness-weighted spectral centroid, showing the main acoustic-perceptual relationship.</figcaption>
+          </figure>
+          <figure class="figure-card">
+            <img src="{{ app_path(request, '/static/indefinite_pitch/results/Figure2_mixedlm_loud_only_partial_effect.png') }}" alt="Mixed-effects model marginal effect">
+            <figcaption data-i18n="figureCaption4">Mixed-effects model view of the contribution of loudness-weighted spectral information to pitch-height judgments.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="context-section">
+        <h2 data-i18n="whyMatters">Why It Matters Here</h2>
+        <p data-i18n="whyText">
+          SoundSketcher needs a vertical pitch-like mapping for electroacoustic and
+          environmental sounds, not only for harmonic tones. This experiment supports
+          a practical idea: when fundamental frequency is unreliable, perceptually
+          weighted spectral information can still guide graphical placement.
+        </p>
+      </section>
+
+      <section class="context-section">
+        <h2 data-i18n="links">Links</h2>
+        <p class="notice">
+          <a href="{{ app_path(request, '/static/indefinite_pitch/Consent-details.pdf') }}" target="_blank" rel="noopener" data-i18n="participantPdf">Original participant information PDF</a>
+          <br>
+          <a href="{{ app_path(request, '/') }}" rel="noopener" data-i18n="backHome">Back to SoundSketcher</a>
+        </p>
+      </section>
+    </aside>
+  </main>
+
+  <audio id="stimulusAudio" preload="auto"></audio>
+
+  <script>
+    const APP_BASE_PATH = "{{ app_base_path(request) }}";
+
+    function appPath(path) {
+      const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+      if (!APP_BASE_PATH) return normalizedPath;
+      return normalizedPath === "/" ? `${APP_BASE_PATH}/` : `${APP_BASE_PATH}${normalizedPath}`;
+    }
+
+    const translations = {
+      en: {
+        documentTitle: "Indefinite-Pitch Sounds | SoundSketcher",
+        eyebrow: "SoundSketcher experiment showcase",
+        title: "Indefinite-Pitch Sounds",
+        lead: "A listening task for sounds that do not offer a stable fundamental frequency: noise bands, clusters, environmental textures, and other sounds whose pitch height is perceptually real but acoustically ambiguous.",
+        play: "Play",
+        stopPlaying: "Stop",
+        studySet: "Study set",
+        trainingSet: "Training set",
+        of: "of",
+        loadingSounds: "Loading sounds...",
+        noSounds: "No sounds found",
+        loadError: "Could not load the indefinite-pitch sounds.",
+        matchTitle: "Sinusoidal match",
+        loopOn: "Loop: ON",
+        loopOff: "Loop: OFF",
+        playSine: "Play sine",
+        noMatch: "I cannot find a match",
+        stop: "Stop",
+        sineVolume: "Sine volume",
+        sliderHint: "Hold the slider to hear the sine tone, then release to stop it.",
+        stimuli: "Stimuli",
+        training: "Training",
+        study: "Study",
+        trainingSound: "Training sound",
+        studyStimulus: "Study stimulus",
+        publicationContext: "Publication Context",
+        studySnapshot: "Study Snapshot",
+        listeners: "listeners",
+        nonHarmonicSounds: "non-harmonic sounds",
+        taskStat: "sinusoidal adjustment task",
+        methodology: "Methodology",
+        method1: "Participants first used three training examples to learn the interface and set a comfortable listening level.",
+        method2: "For each study sound, they adjusted a sine tone until it matched the perceived pitch height of the sound.",
+        method3: "When no convincing pitch match was available, they could mark the trial as no match.",
+        coreFindings: "Core Findings",
+        finding1: "Listeners can make reliable pitch-height distinctions even when periodic cues are weak or absent.",
+        finding2: "A loudness-weighted spectral centroid is a useful predictor of perceived pitch height in these sounds.",
+        finding3: "Sounds with greater spectrotemporal variability tend to produce less accurate or more dispersed matches.",
+        resultFigures: "Result Figures",
+        figureCaption1: "Distribution of listener pitch matches per stimulus, highlighting agreement and dispersion across sounds.",
+        figureCaption2: "Stimulus-level pitch judgments against spectral centroid, with compact stimulus labels.",
+        figureCaption3: "Median perceived pitch height plotted against loudness-weighted spectral centroid, showing the main acoustic-perceptual relationship.",
+        figureCaption4: "Mixed-effects model view of the contribution of loudness-weighted spectral information to pitch-height judgments.",
+        binPlot: "Open bin plot",
+        whyMatters: "Why It Matters Here",
+        whyText: "SoundSketcher needs a vertical pitch-like mapping for electroacoustic and environmental sounds, not only for harmonic tones. This experiment supports a practical idea: when fundamental frequency is unreliable, perceptually weighted spectral information can still guide graphical placement.",
+        links: "Links",
+        participantPdf: "Original participant information PDF",
+        backHome: "Back to SoundSketcher",
+      },
+      el: {
+        documentTitle: "Τονικά ακαθόριστοι ήχοι | SoundSketcher",
+        eyebrow: "Παρουσίαση πειράματος SoundSketcher",
+        title: "Τονικά ακαθόριστοι ήχοι",
+        lead: "Μια ακουστική δοκιμή για ήχους που δεν έχουν σταθερή θεμελιώδη συχνότητα: ζώνες θορύβου, συμπλέγματα, περιβαλλοντικές υφές και άλλοι ήχοι των οποίων το τονικό ύψος είναι αντιληπτικά υπαρκτό αλλά ακουστικά αμφίσημο.",
+        play: "Αναπαραγωγή",
+        stopPlaying: "Στοπ",
+        studySet: "Κύριο σύνολο",
+        trainingSet: "Ενδεικτικό σύνολο",
+        of: "από",
+        loadingSounds: "Φόρτωση ήχων...",
+        noSounds: "Δεν βρέθηκαν ήχοι",
+        loadError: "Δεν ήταν δυνατή η φόρτωση των ήχων.",
+        matchTitle: "Αντιστοίχιση με ημίτονο",
+        loopOn: "Loop: ON",
+        loopOff: "Loop: OFF",
+        playSine: "Παίξε ημίτονο",
+        noMatch: "Δεν βρίσκω αντιστοίχιση",
+        stop: "Στοπ",
+        sineVolume: "Ένταση ημιτόνου",
+        sliderHint: "Κρατήστε πατημένο το slider για να ακούσετε το ημίτονο και αφήστε το για να σταματήσει.",
+        stimuli: "Ηχητικά παραδείγματα",
+        training: "Ενδεικτικά",
+        study: "Κύρια",
+        trainingSound: "Ενδεικτικός ήχος",
+        studyStimulus: "Ήχος πειράματος",
+        publicationContext: "Δημοσίευση",
+        studySnapshot: "Σύνοψη μελέτης",
+        listeners: "ακροατές",
+        nonHarmonicSounds: "μη αρμονικοί ήχοι",
+        taskStat: "δοκιμή προσαρμογής ημιτόνου",
+        methodology: "Μεθοδολογία",
+        method1: "Οι συμμετέχοντες χρησιμοποίησαν πρώτα τρία ενδεικτικά παραδείγματα για να εξοικειωθούν με το περιβάλλον και να ρυθμίσουν την ένταση ακρόασης.",
+        method2: "Για κάθε ήχο της μελέτης, ρύθμιζαν ένα ημίτονο μέχρι να αντιστοιχεί στο αντιληπτό τονικό ύψος του ήχου.",
+        method3: "Όταν δεν υπήρχε πειστική αντιστοίχιση τονικού ύψους, μπορούσαν να δηλώσουν ότι δεν βρίσκουν αντιστοίχιση.",
+        coreFindings: "Βασικά ευρήματα",
+        finding1: "Οι ακροατές μπορούν να κάνουν αξιόπιστες διακρίσεις τονικού ύψους ακόμη και όταν τα περιοδικά στοιχεία είναι ασθενή ή απουσιάζουν.",
+        finding2: "Το κέντρο βάρους του φάσματος με στάθμιση ακουστότητας είναι χρήσιμος προβλεπτικός δείκτης του αντιληπτού τονικού ύψους σε αυτούς τους ήχους.",
+        finding3: "Ήχοι με μεγαλύτερη φασματοχρονική μεταβλητότητα τείνουν να οδηγούν σε λιγότερο ακριβείς ή πιο διασπαρμένες αντιστοιχίσεις.",
+        resultFigures: "Γραφήματα αποτελεσμάτων",
+        figureCaption1: "Κατανομή των αντιστοιχίσεων τονικού ύψους ανά ηχητικό ερέθισμα, αναδεικνύοντας τη συμφωνία και τη διασπορά μεταξύ ακροατών.",
+        figureCaption2: "Κρίσεις τονικού ύψους ανά ερέθισμα σε σχέση με το φασματικό κέντρο βάρους, με σύντομες ετικέτες ερεθισμάτων.",
+        figureCaption3: "Το διάμεσο αντιληπτό τονικό ύψος σε σχέση με το κέντρο βάρους του φάσματος με στάθμιση ακουστότητας, δείχνοντας την κύρια ακουστικο-αντιληπτική σχέση.",
+        figureCaption4: "Απεικόνιση του μικτού μοντέλου για τη συμβολή της φασματικής πληροφορίας με στάθμιση ακουστότητας στις κρίσεις τονικού ύψους.",
+        binPlot: "Άνοιγμα bin plot",
+        whyMatters: "Γιατί μας αφορά εδώ",
+        whyText: "Το SoundSketcher χρειάζεται έναν κατακόρυφο χάρτη που να λειτουργεί σαν τονικό ύψος για ηλεκτροακουστικούς και περιβαλλοντικούς ήχους, όχι μόνο για αρμονικούς τόνους. Το πείραμα υποστηρίζει μια πρακτική ιδέα: όταν η θεμελιώδης συχνότητα δεν είναι αξιόπιστη, η αντιληπτικά σταθμισμένη φασματική πληροφορία μπορεί ακόμη να καθοδηγήσει τη γραφική τοποθέτηση.",
+        links: "Σύνδεσμοι",
+        participantPdf: "Αρχικό έντυπο πληροφοριών συμμετέχοντα",
+        backHome: "Επιστροφή στο SoundSketcher",
+      },
+    };
+
+    const state = {
+      set: "study",
+      sounds: [],
+      index: 0,
+      language: "en",
+      noMatch: false,
+      isTonePlaying: false,
+      loopEnabled: false,
+      audioContext: null,
+      oscillator: null,
+      gain: null,
+    };
+
+    const elements = {
+      audio: document.getElementById("stimulusAudio"),
+      playStimulus: document.getElementById("playStimulus"),
+      currentSoundTitle: document.getElementById("currentSoundTitle"),
+      currentSetLabel: document.getElementById("currentSetLabel"),
+      currentIndexLabel: document.getElementById("currentIndexLabel"),
+      soundGrid: document.getElementById("soundGrid"),
+      trainingSetButton: document.getElementById("trainingSetButton"),
+      studySetButton: document.getElementById("studySetButton"),
+      englishButton: document.getElementById("englishButton"),
+      greekButton: document.getElementById("greekButton"),
+      frequencySlider: document.getElementById("frequencySlider"),
+      frequencyReadout: document.getElementById("frequencyReadout"),
+      playTone: document.getElementById("playTone"),
+      loopToggle: document.getElementById("loopToggle"),
+      noMatch: document.getElementById("noMatch"),
+      sineVolume: document.getElementById("sineVolume"),
+      sineVolumeReadout: document.getElementById("sineVolumeReadout"),
+      stopAll: document.getElementById("stopAll"),
+    };
+
+    const loudnessReference = [
+      { f: 20, spl: 12.5 },
+      { f: 50, spl: 17.3 },
+      { f: 100, spl: 20.3 },
+      { f: 200, spl: 21.5 },
+      { f: 400, spl: 23.0 },
+      { f: 800, spl: 27.5 },
+      { f: 1000, spl: 26.0 },
+      { f: 2000, spl: 24.5 },
+      { f: 4000, spl: 24.0 },
+      { f: 8000, spl: 26.5 },
+      { f: 10000, spl: 30.0 },
+      { f: 12000, spl: 35.5 },
+      { f: 16000, spl: 30.0 },
+    ];
+
+    const minSpl = Math.min(...loudnessReference.map((point) => point.spl));
+    const normalizedGainPoints = loudnessReference.map((point) => ({
+      f: point.f,
+      gain: Math.pow(10, (minSpl - point.spl) / 20),
+    }));
+
+    const labelMap = {
+      "CL_complex-add-sine-001.wav": "sn1",
+      "CL_complex-add-sine-002.wav": "sn2",
+      "NO_experiment_sounds_500hz_very_tight_543_hz.wav": "543",
+      "NO_experiment_sounds_650hz_very_tight_703_hz.wav": "703",
+      "NO_experiment_sounds_850hz_very_tight_916_hz.wav": "916",
+      "NO_01_noise-medium-narrow-bandpass-filter-196hz-G3.wav": "196",
+      "NO_04_noise-medium-narrow-bandpass-filter-987hz-B5.wav": "987",
+      "NO_05_noise-high-density-bandpass-filter-146hz-D3-and-440hz-A4.wav": "146",
+      "ES_rain.wav": "rai",
+      "ES_frogChorus.wav": "frg",
+      "ES_continious_crickets.wav": "crt",
+      "CL_cluster-low.wav": "low",
+      "CL_cluster-medium.wav": "med",
+      "CL_cluster-high.wav": "hig",
+      "CL_cluster-spread.wav": "spr",
+      "ES_Tractor_3sec.wav": "trc",
+      "ES_experiment_sounds 3-letter-sorting-machine_4830_hz.wav": "sor",
+      "ES_experiment_sounds 4-washing-machine_wash_2047hz.wav": "was",
+      "NO_white-noise.wav": "noi",
+    };
+
+    const binPlotMap = {
+      "CL_complex-add-sine-001.wav": "bins_CL_complex-add-sine-001.png",
+      "CL_complex-add-sine-002.wav": "bins_CL_complex-add-sine-002.png",
+      "NO_experiment_sounds_500hz_very_tight_543_hz.wav": "bins_NO_experiment_sounds_500hz_very_tight_543_hz.png",
+      "NO_experiment_sounds_650hz_very_tight_703_hz.wav": "bins_NO_experiment_sounds_650hz_very_tight_703_hz.png",
+      "NO_experiment_sounds_850hz_very_tight_916_hz.wav": "bins_NO_experiment_sounds_850hz_very_tight_916_hz.png",
+      "NO_01_noise-medium-narrow-bandpass-filter-196hz-G3.wav": "bins_NO_01_noise-medium-narrow-bandpass-filter-196hz-G3.png",
+      "NO_04_noise-medium-narrow-bandpass-filter-987hz-B5.wav": "bins_NO_04_noise-medium-narrow-bandpass-filter-987hz-B5.png",
+      "NO_05_noise-high-density-bandpass-filter-146hz-D3-and-440hz-A4.wav": "bins_NO_05_noise-high-density-bandpass-filter-146hz-D3-and-440hz-A4.png",
+      "ES_rain.wav": "bins_ES_rain.png",
+      "ES_frogChorus.wav": "bins_ES_frogChorus.png",
+      "ES_continious_crickets.wav": "bins_ES_continious_crickets.png",
+      "CL_cluster-low.wav": "bins_CL_cluster-low.png",
+      "CL_cluster-medium.wav": "bins_CL_cluster-medium.png",
+      "CL_cluster-high.wav": "bins_CL_cluster-high.png",
+      "CL_cluster-spread.wav": "bins_CL_cluster-spread.png",
+      "ES_Tractor_3sec.wav": "bins_ES_Tractor_3sec.png",
+      "ES_experiment_sounds 3-letter-sorting-machine_4830_hz.wav": "bins_ES_experiment_sounds_3-letter-sorting-machine_4830_hz.png",
+      "ES_experiment_sounds 4-washing-machine_wash_2047hz.wav": "bins_ES_experiment_sounds_4-washing-machine_wash_2047hz.png",
+      "NO_white-noise.wav": "bins_NO_white-noise.png",
+    };
+
+    function t(key) {
+      return translations[state.language][key] || translations.en[key] || key;
+    }
+
+    function applyLanguage(language) {
+      state.language = language;
+      document.documentElement.lang = language === "el" ? "el" : "en";
+      document.title = t("documentTitle");
+      elements.englishButton.setAttribute("aria-pressed", language === "en" ? "true" : "false");
+      elements.greekButton.setAttribute("aria-pressed", language === "el" ? "true" : "false");
+      document.querySelectorAll("[data-i18n]").forEach((node) => {
+        node.textContent = t(node.dataset.i18n);
+      });
+      if (elements.playStimulus.dataset.playing !== "true") {
+        elements.playStimulus.textContent = t("play");
+      }
+      if (!state.isTonePlaying) {
+        elements.playTone.textContent = t("playSine");
+      }
+      elements.loopToggle.textContent = state.loopEnabled ? t("loopOn") : t("loopOff");
+      updateCurrentLabels();
+      renderSounds();
+    }
+
+    function cleanName(filename) {
+      return filename
+        .replace(/\.(wav|mp3|ogg|flac|m4a)$/i, "")
+        .replace(/_/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function stimulusLabel(filename) {
+      return labelMap[filename] || cleanName(filename).slice(0, 3).toLowerCase();
+    }
+
+    function binPlotUrl(filename) {
+      const plotFilename = binPlotMap[filename];
+      return plotFilename
+        ? appPath(`/static/indefinite_pitch/results/bins_plots/${encodeURIComponent(plotFilename)}`)
+        : "";
+    }
+
+    function currentFolder() {
+      return state.set === "training" ? "indefinite_pitch/training" : "indefinite_pitch";
+    }
+
+    function currentEndpoint() {
+      return state.set === "training" ? appPath("/get_sounds_training") : appPath("/get_sounds");
+    }
+
+    function audioUrl(filename) {
+      return appPath(`/static/${currentFolder()}/${encodeURIComponent(filename).replace(/%2F/g, "/")}`);
+    }
+
+    function stopTone() {
+      const oscillator = state.oscillator;
+      const gain = state.gain;
+      state.oscillator = null;
+      state.gain = null;
+      state.isTonePlaying = false;
+
+      if (oscillator) {
+        const now = state.audioContext ? state.audioContext.currentTime : 0;
+        try {
+          if (gain && state.audioContext) {
+            gain.gain.setTargetAtTime(0, now, 0.01);
+            oscillator.stop(now + 0.05);
+          } else {
+            oscillator.stop();
+          }
+        } catch (error) {
+          // The tone may already have been stopped by another release event.
+        }
+        setTimeout(() => {
+          try {
+            oscillator.disconnect();
+          } catch (error) {}
+          try {
+            gain?.disconnect();
+          } catch (error) {}
+        }, 60);
+      }
+      elements.playTone.textContent = t("playSine");
+    }
+
+    function sliderToFrequency(value) {
+      const minFreq = 40;
+      const maxFreq = 6000;
+      const minLog = Math.log10(minFreq);
+      const maxLog = Math.log10(maxFreq);
+      const scale = value / 1000;
+      return Math.pow(10, minLog + (maxLog - minLog) * scale);
+    }
+
+    function frequencyToSlider(freq) {
+      const minFreq = 40;
+      const maxFreq = 6000;
+      const minLog = Math.log10(minFreq);
+      const maxLog = Math.log10(maxFreq);
+      return ((Math.log10(freq) - minLog) / (maxLog - minLog)) * 1000;
+    }
+
+    function loudnessCompensation(frequency) {
+      const freq = Math.max(20, Math.min(16000, frequency));
+      for (let i = 0; i < normalizedGainPoints.length - 1; i += 1) {
+        const left = normalizedGainPoints[i];
+        const right = normalizedGainPoints[i + 1];
+        if (freq >= left.f && freq <= right.f) {
+          const logFreq = Math.log10(freq);
+          const tValue = (logFreq - Math.log10(left.f)) / (Math.log10(right.f) - Math.log10(left.f));
+          return left.gain * (1 - tValue) + right.gain * tValue;
+        }
+      }
+      return 1.0;
+    }
+
+    function currentFrequency() {
+      return sliderToFrequency(Number(elements.frequencySlider.value));
+    }
+
+    function currentSineVolume() {
+      return Number(elements.sineVolume.value) / 100;
+    }
+
+    function resetNoMatch() {
+      state.noMatch = false;
+      elements.noMatch.setAttribute("aria-pressed", "false");
+      elements.frequencySlider.classList.remove("slider-locked");
+    }
+
+    function updateToneFrequency() {
+      const frequency = currentFrequency();
+      elements.frequencyReadout.textContent = `${frequency.toFixed(0)} Hz`;
+      if (state.oscillator && state.audioContext) {
+        state.oscillator.frequency.setTargetAtTime(frequency, state.audioContext.currentTime, 0.01);
+      }
+      updateSineGain();
+    }
+
+    function updateSineGain() {
+      const frequency = currentFrequency();
+      elements.sineVolumeReadout.textContent = `${Number(elements.sineVolume.value).toFixed(0)}%`;
+      if (state.gain && state.audioContext) {
+        const baseGain = currentSineVolume();
+        state.gain.gain.setTargetAtTime(
+          baseGain * loudnessCompensation(frequency),
+          state.audioContext.currentTime,
+          0.01
+        );
+      }
+    }
+
+    function startTone() {
+      const audioContext = ensureAudioContext();
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+      stopTone();
+      stopStimulus();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const frequency = currentFrequency();
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+      gain.gain.value = currentSineVolume() * loudnessCompensation(frequency);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      state.oscillator = oscillator;
+      state.gain = gain;
+      state.isTonePlaying = true;
+      elements.playTone.textContent = t("stop");
+    }
+
+    function toggleTone() {
+      if (state.isTonePlaying) {
+        stopTone();
+      } else {
+        startTone();
+        elements.playTone.textContent = t("stop");
+      }
+    }
+
+    function stopStimulus() {
+      elements.audio.pause();
+      elements.audio.currentTime = 0;
+      elements.playStimulus.dataset.playing = "false";
+      elements.playStimulus.textContent = t("play");
+    }
+
+    function updateLoopState() {
+      elements.audio.loop = state.loopEnabled;
+      elements.loopToggle.setAttribute("aria-pressed", state.loopEnabled ? "true" : "false");
+      elements.loopToggle.textContent = state.loopEnabled ? t("loopOn") : t("loopOff");
+    }
+
+    function stopAll() {
+      stopTone();
+      stopStimulus();
+    }
+
+    function ensureAudioContext() {
+      state.audioContext = state.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+      return state.audioContext;
+    }
+
+    function updateCurrentLabels() {
+      elements.currentSetLabel.textContent = state.set === "training" ? t("trainingSet") : t("studySet");
+      elements.currentIndexLabel.textContent = state.sounds.length
+        ? `${state.index + 1} ${t("of")} ${state.sounds.length}`
+        : `0 ${t("of")} 0`;
+    }
+
+    function selectSound(index) {
+      state.index = index;
+      const filename = state.sounds[state.index];
+      elements.audio.src = audioUrl(filename);
+      elements.currentSoundTitle.textContent = cleanName(filename);
+      updateCurrentLabels();
+      [...elements.soundGrid.querySelectorAll(".sound-card")].forEach((card, cardIndex) => {
+        card.setAttribute("aria-current", cardIndex === state.index ? "true" : "false");
+      });
+      stopAll();
+    }
+
+    function renderSounds() {
+      elements.soundGrid.innerHTML = "";
+      state.sounds.forEach((filename, index) => {
+        const card = document.createElement("div");
+        card.className = "sound-card";
+        card.setAttribute("aria-current", index === state.index ? "true" : "false");
+        const button = document.createElement("button");
+        button.className = "sound-card-select";
+        button.type = "button";
+        const top = document.createElement("span");
+        top.className = "sound-card-top";
+        const title = document.createElement("span");
+        title.className = "sound-card-title";
+        title.textContent = cleanName(filename);
+        const code = document.createElement("span");
+        code.className = "stimulus-code";
+        code.textContent = stimulusLabel(filename);
+        top.append(title, code);
+        const kind = document.createElement("span");
+        kind.className = "sound-card-kind";
+        kind.textContent = state.set === "training" ? t("trainingSound") : t("studyStimulus");
+        button.append(top, kind);
+        button.addEventListener("click", () => selectSound(index));
+        card.appendChild(button);
+        const plotUrl = binPlotUrl(filename);
+        if (plotUrl && state.set === "study") {
+          const link = document.createElement("a");
+          link.className = "bin-plot-link";
+          link.href = plotUrl;
+          link.target = "_blank";
+          link.rel = "noopener";
+          link.textContent = t("binPlot");
+          card.appendChild(link);
+        }
+        elements.soundGrid.appendChild(card);
+      });
+    }
+
+    async function loadSoundSet(nextSet) {
+      state.set = nextSet;
+      elements.trainingSetButton.setAttribute("aria-pressed", state.set === "training" ? "true" : "false");
+      elements.studySetButton.setAttribute("aria-pressed", state.set === "study" ? "true" : "false");
+      elements.currentSoundTitle.textContent = t("loadingSounds");
+      updateCurrentLabels();
+      elements.soundGrid.innerHTML = "";
+
+      const response = await fetch(currentEndpoint());
+      if (!response.ok) {
+        throw new Error(`Could not load ${state.set} sounds`);
+      }
+      state.sounds = await response.json();
+      state.index = 0;
+      renderSounds();
+      if (state.sounds.length) {
+        selectSound(0);
+      } else {
+        elements.currentSoundTitle.textContent = t("noSounds");
+      }
+    }
+
+    elements.playStimulus.addEventListener("click", async () => {
+      stopTone();
+      if (elements.audio.paused) {
+        await elements.audio.play();
+        elements.playStimulus.dataset.playing = "true";
+        elements.playStimulus.textContent = t("stopPlaying");
+      } else {
+        stopStimulus();
+      }
+    });
+
+    elements.audio.addEventListener("ended", () => {
+      elements.playStimulus.dataset.playing = "false";
+      elements.playStimulus.textContent = t("play");
+    });
+
+    elements.frequencySlider.addEventListener("pointerdown", () => {
+      resetNoMatch();
+      startTone();
+    });
+    elements.frequencySlider.addEventListener("input", updateToneFrequency);
+    elements.frequencySlider.addEventListener("pointerup", stopTone);
+    elements.frequencySlider.addEventListener("pointercancel", stopTone);
+    elements.frequencySlider.addEventListener("pointerleave", stopTone);
+    elements.frequencySlider.addEventListener("touchend", stopTone);
+    elements.playTone.addEventListener("click", toggleTone);
+    elements.loopToggle.addEventListener("click", () => {
+      state.loopEnabled = !state.loopEnabled;
+      updateLoopState();
+    });
+    elements.noMatch.addEventListener("click", () => {
+      state.noMatch = !state.noMatch;
+      elements.noMatch.setAttribute("aria-pressed", state.noMatch ? "true" : "false");
+      elements.frequencySlider.classList.toggle("slider-locked", state.noMatch);
+      stopTone();
+    });
+    elements.sineVolume.addEventListener("input", updateSineGain);
+    elements.stopAll.addEventListener("click", stopAll);
+    elements.trainingSetButton.addEventListener("click", () => loadSoundSet("training"));
+    elements.studySetButton.addEventListener("click", () => loadSoundSet("study"));
+    elements.englishButton.addEventListener("click", () => applyLanguage("en"));
+    elements.greekButton.addEventListener("click", () => applyLanguage("el"));
+    document.addEventListener("pointerup", stopTone);
+    window.addEventListener("blur", stopTone);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "a" || event.key === "A") {
+        elements.playStimulus.click();
+      }
+    });
+
+    elements.frequencySlider.value = frequencyToSlider(440).toFixed(0);
+    updateToneFrequency();
+    updateSineGain();
+    updateLoopState();
+    applyLanguage("en");
+    loadSoundSet("study").catch((error) => {
+      console.error(error);
+      elements.currentSoundTitle.textContent = t("loadError");
+    });
+  </script>
+</body>
+</html>

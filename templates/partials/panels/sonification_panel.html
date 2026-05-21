@@ -1,0 +1,130 @@
+            <div class="left">
+
+                
+                <div class="global-settings__header"> 
+                    Sonificators<span class="question-mark" id="sonificatorsHelp">?</span>
+                </div>
+
+                
+                <div class="sonificators-container">
+
+                    
+                    <div class="granulator_container mixer_sonificator-container">
+    
+                        <div id="oscillator-engine-header" class="global-settings__header accordion-header">
+                            Oscillator Engine
+                        </div>
+
+                        <div class="modal">
+
+                            <div class="modal-content">
+
+                                <span class="close-button">&times;</span>
+
+                                <h2 class="modal-heading">Oscillator-based Sonification</h2>
+
+                                <p class="modal-description">
+                                    Select the waveform of the oscillator engine:
+                                </p>
+    
+                                <div class="waveform-selector">
+                                    <button id="waveformPrev" class="arrow-button">◀</button>
+                                    <div class="waveform-display">
+                                        <img id="waveformImage" src="{{ sandbox_static_path(request, 'assets/sine-wave.svg') }}" alt="Sine Wave">
+                                    </div>
+                                    <button id="waveformNext" class="arrow-button">▶</button>
+                                </div>
+
+                                <div class="slider-container soundsketcher-stacked-slider">
+                                    
+                                    <label for="osc-slider">Master Volume:</label>
+                                    <div class="column range-slider-column soundsketcher-compact-slider">
+                                        <div id="osc-slider" class="range-slider"></div>
+                                    </div>
+                                </div>
+        
+                                <div class="button-container">
+                                    <button id="playOscillator" class="global-settings__button sonificators__play-button" data-engine="oscillator">Play</button>
+                                </div>
+
+                            </div>
+                        </div>
+    
+                        
+    
+                    </div>
+
+                    
+                    <div class="granulator_container mixer_sonificator-container">
+    
+                        <div id="granular-engine-header" class="global-settings__header accordion-header">
+                            Granular Engine
+                        </div>
+
+                        <div class="modal">
+
+                            <div class="modal-content">
+
+                                <span class="close-button">&times;</span>
+
+                                <h2 class="modal-heading">Granular-based Sonification</h2>
+
+                                <p class="modal-description">
+                                    Select the sample of the granular engine:
+                                </p>
+
+                                
+                                
+                                
+
+                                <div class="waveform-container">
+                                    <canvas id="waveformCanvas" width="0" height="0"></canvas>
+                                    <div id="waveform-text">
+                                        Upload your audio file here!
+                                    </div>
+                                    <input type="file" id="fileInput" class="app-hidden" accept="audio/*">
+                                </div>
+                                <div id="granularSampleStatus" class="granular-sample-status" aria-live="polite">
+                                    No sample loaded
+                                </div>
+
+                                
+
+                                <div class="slider-container soundsketcher-stacked-slider">
+                                    
+                                    <label for="grain-slider">Master Volume:</label>
+                                    <div class="column range-slider-column soundsketcher-compact-slider">
+                                        <div id="grain-slider" class="range-slider"></div>
+                                    </div>
+                                </div>
+
+                                <div class="granular-action-row">
+                                    <button id="useCurrentAudioGranulator" class="global-settings__button" type="button">Use Current Audio</button>
+                                    <button id="playGranulator" class="global-settings__button sonificators__play-button" data-engine="granular">Play</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+    
+                        
+    
+                    </div>
+
+                </div>
+
+                
+                
+                <div id="controls" class="center">
+                    <div class="global-settings__header">
+                        Mixer Controls
+                    </div>
+                    <div class="mixer-subcontainer" id="mixer-subcontainer">
+                        <div id="mixer">
+                        </div>
+                        <button id="playStopButton" class="play-stop-button">
+                            <img id="playStopIcon" class="play-stop-button__icon" src="{{ sandbox_static_path(request, 'assets/play.png') }}" alt="Play">
+                        </button>
+                    </div>
+                </div>
+            </div>

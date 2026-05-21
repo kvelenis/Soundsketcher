@@ -1,0 +1,836 @@
+            <div class="selections__container right">
+
+                <div class="selections__feature2sketch-container">
+                    
+                        <div class="global-settings__header">
+                            Mapping Settings<span class="question-mark" id="mappindSettingsHelp">?</span>
+                        </div>
+                    <div class="selection-container">
+                        
+                        <div class="selection-header">
+                            <div class="column feature-column">Audio Features<span class="question-mark" id="audioFeaturesHelp">?</span>
+                            </div>
+                            <div class="column characteristic-column">Sketch Characteristic</div>
+                            <div class="column checkbox-column">Invert Mapping</div>
+                            <div class="column slider-column">Min | Max</div>
+                        </div>
+
+                        
+
+                        
+                        <div id="helpAudioFeatureModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close-button" id="closeAudioFeatureModal">&times;</span>
+                                <h2 class="modal-heading">Audio Features Explanation</h2>
+                                <ul class="modal-list">
+                                    <li><strong>Spectral Centroid:</strong> Indicates where the "center of mass" of the spectrum is located, often used to describe the "brightness" of a sound. Higher values represent more high-frequency content.</li>
+                                    <li><strong>F0-SC Combo:</strong> A combination of fundamental frequency (F0) and spectral centroid. It balances the pitch perception with the brightness of the sound.</li>
+                                    <li><strong>F0 | CREPE:</strong> Fundamental frequency estimation using the CREPE model, providing high precision for pitch tracking.</li>
+                                    <li><strong>Yin F0 | Librosa:</strong> A pitch detection algorithm implemented in Librosa. It estimates the fundamental frequency using the YIN algorithm.</li>
+                                    <li><strong>Yin F0 | Aubio:</strong> Similar to Librosa's implementation but uses the Aubio library for fundamental frequency detection.</li>
+                                    <li><strong>F0 | CREPE Confidence:</strong> Confidence level of the pitch estimation from the CREPE model. Higher values indicate more reliable pitch detection.</li>
+                                    <li><strong>Spectral Flux:</strong> Measures the rate of change in the power spectrum, indicating the onset of new frequencies or dynamics in the sound.</li>
+                                    <li><strong>Spectral Flatness:</strong> A measure of the noisiness or tonal quality of the sound. Higher values indicate more noise-like signals, while lower values are more tone-like.</li>
+                                    <li><strong>Spectral Bandwidth:</strong> The range of frequencies present in the signal, often used to describe the width of the spectral distribution.</li>
+                                    <li><strong>Zero Crossing Rate:</strong> Counts how often the signal changes sign (crosses the zero line), commonly associated with noisiness or percussiveness.</li>
+                                    <li><strong>Amplitude:</strong> Represents the loudness or energy level of the audio. Higher amplitudes correspond to louder sounds.</li>
+                                    <li><strong>Brightness:</strong> Describes how much high-frequency content exists in the sound, contributing to its sharpness and clarity.</li>
+                                    <li><strong>Sharpness:</strong> Indicates how harsh or cutting the sound feels, often associated with high frequencies.</li>
+                                    <li><strong>Loudness:</strong> A perceptual measure of sound intensity, taking into account the sensitivity of human hearing at different frequencies.</li>
+                                    <li><strong>Loudness-ZCR:</strong> A hybrid measure combining loudness and zero-crossing rate to capture both intensity and noisiness.</li>
+                                    <li><strong>None:</strong> Disables the mapping for this feature, leaving it unassigned.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        
+                        <div id="helpMappingModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close-button" id="closeMappingModal">&times;</span>
+                                <h2 class="modal-heading">Mapping Settings Explanation</h2>
+                                <h3 class="modal-heading-h3">Functionality</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Inversion:</strong> Reverses the mapping, placing high values at the bottom of the canvas and low values at the top.</li>
+                                    <li><strong>Sliders:</strong> Control the minimum and maximum range of each mapped feature.</li>
+                                    <li><strong>Randomizer:</strong> Randomly assigns features to the available mapping slots for exploration.</li>
+                                    <li><strong>Reset:</strong> Resets all settings, including feature mappings, slider values, and inversion states.</li>
+                                </ul>
+                                <h3 class="modal-heading-h3">Hotkeys</h3>
+                                <ul class="modal-list">
+                                    <li><strong>F:</strong> Toggles the settings menu (e.g., fold/unfold).</li>
+                                    <li><strong>A:</strong> Resketch the score.</li>
+                                    <li><strong>S:</strong> Trigger the randomizer functionality.</li>
+                                    <li><strong>D:</strong> Resets all settings to their default states.</li>
+                                    <li><strong>Z:</strong> Select preset A.</li>
+                                    <li><strong>X:</strong> Select preset B.</li>
+                                    <li><strong>C:</strong> Select preset C.</li>
+                                    <li><strong>Spacebar:</strong> Play the audio.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        
+                        <div id="helpSonificatorsModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close-button" id="closeSonificatorsModal">&times;</span>
+                                <h2 class="modal-heading">Sonificators Explanation</h2>
+                                <h3 class="modal-heading-h3">Purpose</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Oscillator Sonification:</strong> Uses basic waveforms (sine, sawtooth, triangle, and square) to represent match sketch characteristics to oscillation parameters.</li>
+                                    <li><strong>Granulator Sonification:</strong> Explores sound texture and temporal aspects by segmenting and playing grains of audio.</li>
+                                </ul>
+                                <h3 class="modal-heading-h3">Functionality</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Waveform Selector:</strong> Allows you to toggle between waveforms for oscillator sonification. Pitch, volume, and other parameters are defined by line characteristics.</li>
+                                    <li><strong>Granulation:</strong> Parameters like grain size, spread, and playback speed are defined by the line characteristics.</li>
+                                    <li><strong>Play/Stop Toggle:</strong> Simple button to start or stop the playback.</li>
+                                </ul>
+                                <h3 class="modal-heading-h3">Limitations</h3>
+                                <ul class="modal-list">
+                                    <li><strong>Development Stage:</strong> These tools are under active research and development, so their performance may vary.</li>
+                                    <li><strong>Experimental Nature:</strong> Designed for exploration and not optimized for high-performance audio synthesis yet.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+
+                        
+                        <div id="clampFeatureModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close-button" id="closeClampFeatureModal">&times;</span>
+                                <h2 class="modal-heading">Feature Clipping Configuration</h2>
+                                <p class="modal-description">
+                                    Select which features you want to hard/soft clip.<br>
+                                    Unselected features will use unclamped/uncompressed values.
+                                </p>
+                            
+                                
+                                
+                                <select id="clamp-feature-select" class="clamp-feature-select" multiple>
+                            
+                                    
+                                    
+                                    <option value="spectral_centroid" selected>Spectral Centroid</option>
+                                    <option value="weighted_spectral_centroid" selected>Weighted Spectral Centroid</option>
+                                    <option value="crepe_f0" selected>F0 | Crepe</option>
+                                    <option value="yin_f0_librosa" selected>Yin F0 | Librosa</option>
+                                    <option value="perceived_pitch_f0_or_SC_weighted" selected>F0 Or SC weighted | CREPE - Periodicity</option>
+                                    <option value="loudness" selected>Loudness</option>
+                                    <option value="loudness_periodicity" selected>Loudness-Periodicity</option>
+                                    <option value="loudness_pitchConf" selected>Loudness-CREPE Conf</option>
+                                    <option value="sharpness" selected>Sharpness | Mosqito</option>
+                                    <option value="mir_mps_roughness" selected>MIR: MPS Roughness</option>
+                                    <option value="mir_sharpness_zwicker" selected>MIR: Sharpness | Zwicker</option>
+                                    <option value="mir_roughness_vassilakis" selected>MIR: Roughness Vassilakis</option>
+                                    <option value="fullness" selected>Fullness: Alluri & Toiviainen</option>
+                                    <option value="yin_periodicity" selected>Periodicity</option>
+                                    <option value="crepe_confidence" selected>F0 Crepe Conf</option>
+                                    
+                                </select>
+                            
+                                <p class="clamp-feature-note">
+                                    Your changes will take effect immediately when you apply them in your sketch.
+                                </p>
+                            </div>
+                        </div>
+  
+                        
+                        
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-1" class="featureSelect">
+
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted | CREPE - Periodicity</option>
+                                        
+                                      </optgroup>
+
+                                      
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity" selected>Loudness-Periodicity</option>
+                                        
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        
+                                        <option value="fullness">Fullness: Alluri & Toiviainen</option>
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                   
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-line-length" class="svg-characteristic">Line Length</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-1" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-1" class="range-slider"></div>
+                                
+                            </div>
+                            
+                        </div>
+                        
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-2" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        
+                                      </optgroup>
+
+                                      
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity" selected>Loudness-Periodicity</option>
+                                        
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        
+                                        <option value="fullness">Fullness: Alluri & Toiviainen</option>
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-line-width" class="svg-characteristic">Line Width</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-2" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-2" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-3" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        
+                                      </optgroup>
+
+                                      
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        
+                                        <option value="fullness">Fullness: Alluri & Toiviainen</option>
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity" selected>Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div class="svg-characteristic">Color Saturation</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-3" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-3" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-6" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        
+                                      </optgroup>
+
+                                      
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness" selected>Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        
+                                        <option value="fullness">Fullness: Alluri & Toiviainen</option>
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div class="svg-characteristic">Color Lightness</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-6" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-6" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-4" class="featureSelect">
+                                    <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        
+                                      </optgroup>
+
+                                      
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        
+                                        <option value="fullness">Fullness: Alluri & Toiviainen</option>
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity" selected>Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none" >None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-angle" class="svg-characteristic">Angle</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" checked id="invertMapping-4" checked class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-4" class="range-slider"></div>
+                            </div>
+                        </div>
+                        <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-7" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid">Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        
+                                      </optgroup>
+
+                                      
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="💡 Timbre Features">
+                                        
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis" selected>MIR: Roughness | Vassilakis</option>
+                                        
+                                        <option value="fullness">Fullness: Alluri & Toiviainen</option>
+                                      </optgroup>
+
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        
+                                      </optgroup>
+
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div id="svg-characteristic-label-dash-array" class="svg-characteristic">Dash Array</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-7" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-7" class="range-slider"></div>
+                            </div>
+                        </div>
+                        
+                         <div class="selection-row">
+                            <div class="column feature-column">
+                                <select id="featureSelect-5" class="featureSelect">
+                                      <optgroup label="🎵 Pitch-Related Features">
+                                        <option value="spectral_centroid">Spectral Centroid</option>
+                                        <option value="weighted_spectral_centroid" selected>Weighted Spectral Centroid</option>
+                                        <option value="crepe_f0">F0 | CREPE</option>
+                                        <option value="yin_f0_librosa">Yin F0 | Librosa</option>
+                                        
+                                        
+                                      </optgroup>
+                                    
+                                      <optgroup label="🎼 Perceived Pitch Combinations">
+                                        
+                                        <option value="perceived_pitch_f0_or_SC_weighted">F0 Or SC weighted| CREPE - Periodicity</option>
+                                        
+                                      </optgroup>
+                                    
+                                      
+
+                                      <optgroup label="🔊 Volume Features">
+                                        <option value="loudness">Loudness</option>
+                                        <option value="loudness_periodicity">Loudness-Periodicity</option>
+                                        
+                                        <option value="loudness_pitchConf">Loudness-CREPE Conf</option>
+                                        
+                                      </optgroup>
+                                    
+                                      <optgroup label="💡 Timbre Features">
+                                        
+                                        <option value="sharpness">Sharpness | Mosqito</option>
+                                        <option value="mir_mps_roughness">MIR: MPS Roughness</option>
+                                        
+                                        <option value="mir_sharpness_zwicker">MIR: Sharpness | Zwicker</option>
+                                        <option value="mir_roughness_vassilakis">MIR: Roughness | Vassilakis</option>
+                                        
+                                        <option value="fullness">Fullness: Alluri & Toiviainen</option>
+                                      </optgroup>
+                                    
+                                      <optgroup label="🌀 Noisiness">
+                                        <option value="yin_periodicity">Periodicity</option>
+                                        <option value="crepe_confidence">F0 | CREPE Conf</option>
+                                        
+                                      </optgroup>
+                                    
+                                      <optgroup label="🛑 Other">
+                                        <option value="none">None</option>
+                                      </optgroup>
+                                </select>
+                            </div>
+                            <div class="column characteristic-column">
+                                <div class="svg-characteristic">Y Axis</div>
+                            </div>
+                            <div class="column checkbox-column">
+                                <label>
+                                    <input type="checkbox" id="invertMapping-5" class="invertMappingCheckbox">
+                                </label>
+                            </div>
+                            <div class="column range-slider-column">
+                                <div id="slider-5" class="range-slider"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="selection__submit-container">
+                            
+                            <button id="submitButton" class="global-settings__button">Resketch</button>
+
+                            <button id="randomizeFeaturesButton" class="global-settings__button">Randomize All</button>
+
+                            <button id="resetButton" class="global-settings__button reset-button">Reset All</button>
+
+                            <button id="presetButtonA" class="global-settings__button preset-button">Preset A</button>
+
+                            <button id="presetButtonB" class="global-settings__button preset-button">Preset B</button>
+
+                            <button id="presetButtonC" class="global-settings__button preset-button">Preset C</button>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <div class="global-settings__container">
+                    <div class="global-settings__header">
+                        Data Settings
+                    </div>
+                    <div class="global-settings__content">
+                        
+                        
+                        
+                        
+
+                        <div class="global-settings__item">
+                            <label class="global-settings__label settings-label-start">
+                                <input type="checkbox" id="toggleClamp" class="global-settings__checkbox">
+                                Hard Clipping
+                            </label>
+                            <div class="column range-slider-column wide-slider-column">
+                                <div id="slider-clamp" class="range-slider" data-toggle="#toggleClamp"></div>
+                            </div>
+                        </div>
+
+                        <div class="global-settings__item">
+                            <label class="global-settings__label settings-label-start">
+                                <input type="checkbox" id="toggleSoftclip" class="global-settings__checkbox">
+                                Soft Clipping
+                            </label>
+                            <div class="column range-slider-column wide-slider-column">
+                                <div id="slider-softclip" class="range-slider" data-toggle="#toggleSoftclip"></div>
+                            </div>
+                        </div>
+
+                        <div class="global-settings__item">
+                            <button id="openClampFeatureModal" class="global-settings__button">
+                                Configure
+                            </button>
+                        </div>
+
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                Gate Threshold
+                            </label>
+                            <div class="column range-slider-column wide-slider-column">
+                                <div id="slider-gate" class="range-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                Periodicity Threshold
+                            </label>
+                            <div class="column range-slider-column wide-slider-column">
+                                <div id="period-slider" class="range-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                Transition speed
+                            </label>
+                            <div class="column range-slider-column wide-slider-column">
+                                <div id="gamma-slider" class="range-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="global-settings__item">
+                            <label class="global-settings__label">
+                                Noise|tonal calib
+                            </label>
+                            <div class="column range-slider-column wide-slider-column">
+                                <div id="scdivision-slider" class="range-slider"></div>
+                            </div>
+                        </div>
+
+                        
+
+                        <hr class="section-divider">
+
+                        <div class="global-settings__item">
+                            <button id="openAdvancedSettingsModal" class="global-settings__button">
+                                Advanced
+                            </button>
+                        </div>
+
+                        <div id="advancedSettingsModal" class="modal">
+
+                            <div class="modal-content parameter-modal">
+
+                                <span class="close-button" id="closeAdvancedSettingsModal">&times;</span>
+
+                                <h2 class="modal-heading">Advanced Settings</h2>
+
+                                <p class="modal-description">
+                                    Select settings to recalculate features:
+                                </p>
+
+                                
+                                
+                                    <label class="global-settings__label app-hidden" for="normalize_button">
+                                        <input type="checkbox" id="normalize_button" class="global-settings__checkbox app-hidden"> Normalize Audio
+                                    </label>
+                                
+
+                                
+                                <div class="global-settings__item parameter-row">
+                                    <label class="global-settings__label">
+                                        Window Length:
+                                        <select id="window_length_selector" class="app-no-select">
+                                            <option value="32">32</option>
+                                            <option value="64">64</option>
+                                            <option value="128">128</option>
+                                            <option value="256">256</option>
+                                            <option value="512">512</option>
+                                            <option value="1024">1024</option>
+                                            <option value="2048" selected>2048</option>
+                                            <option value="4096">4096</option>
+                                            <option value="8192">8192</option>
+                                            <option value="16384">16384</option>
+                                        </select>
+                                    </label>
+
+                                    <label class="global-settings__label">
+                                        Window Overlap:
+                                        <select id="window_overlap_selector" class="app-no-select">
+                                            <option value="0.0%">0.0%</option>
+                                            <option value="20.0%">20.0%</option>
+                                            <option value="25.0%">25.0%</option>
+                                            <option value="33.3%">33.3%</option>
+                                            <option value="40.0%">40.0%</option>
+                                            <option value="50.0%" selected>50.0%</option>
+                                            <option value="60.0%">60.0%</option>
+                                            <option value="66.6%">66.6%</option>
+                                            <option value="75.0%">75.0%</option>
+                                            <option value="80.0%">80.0%</option>
+                                        </select>
+                                    </label>
+
+                                    <label class="global-settings__label settings-label-center" for="filter_button">
+                                        <input type="checkbox" id="filter_button" class="global-settings__checkbox" checked> Apply Filtering
+                                    </label>
+                                
+                                    
+                                    <button id="recalculate_button" class="global-settings__button">Recalculate</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div class="global-settings__container">
+                    <div class="global-settings__header">
+                        Global Settings
+                    </div>
+                    <div class="global-settings__content">
+                        
+                        
+
+                        <div class="global-settings__item settings-item-start">
+                            
+                            <label class="global-settings__label" for="auto_resketch_button">
+                                <input type="checkbox" checked id="auto_resketch_button" class="global-settings__checkbox"> Automatic Resketch
+                            </label>
+
+                            
+                            
+                             <label class="global-settings__label" for="scrollModeToggle">
+                                <input type="checkbox" id="scrollModeToggle" class="global-settings__checkbox">
+                                Scrollable Canvas
+                            </label>
+
+                            <label class="global-settings__label">
+                                <input type="checkbox" id="log-linear" class="global-settings__checkbox">
+                                Log Scale
+                            </label>
+
+                            <label class="global-settings__label">
+                                <input type="checkbox" checked id="mel-scale" class="global-settings__checkbox">
+                                Mel Scale
+                            </label>
+
+                            
+                            <label class="global-settings__label" for="thresholdCircle">
+                                <input type="checkbox" id="thresholdCircle" class="global-settings__checkbox">
+                                Draw Circles
+                            </label>
+
+                            
+                            
+                            <label class="global-settings__label" for="joindatapoints">
+                                <input type="checkbox" id="joindatapoints" class="global-settings__checkbox">
+                                Connect Lines
+                            </label>
+
+                            
+                            
+                            <label class="global-settings__label" for="linePolygonMode">
+                                <input type="checkbox" id="linePolygonMode" class="global-settings__checkbox" aria-label="Polygon Mode" data-testid="polygon-mode-toggle">
+                                Polygon Mode
+                            </label>
+
+                            <label class="global-settings__label" for="objectifierMode">
+                                <input type="checkbox" id="objectifierMode" class="global-settings__checkbox">
+                                Objectifier Mode
+                            </label>
+                            <label class="global-settings__label" for="objectifierDetailMode">
+                                Objectifier Detail
+                                <select id="objectifierDetailMode" class="global-settings__select">
+                                    <option value="simple">Simple</option>
+                                    <option value="balanced" selected>Balanced</option>
+                                    <option value="detailed">Detailed</option>
+                                </select>
+                            </label>
+                            <div id="objectifierStatus" class="objectifier-status" aria-live="polite">
+                                Objectifier data: no audio loaded
+                            </div>
+                            <button id="objectifierReadyButton" class="objectifier-ready-button" type="button" hidden>
+                                Show Objectifier
+                            </button>
+
+                            
+                            
+                            
+                            
+                            
+                            
+                        </div>
+
+                        <div class="global-settings__item">
+                            <button id="exportButton" class="global-settings__button">Export PNG</button>
+                        </div>
+                        <div class="global-settings__item">
+                            <button id="exportFeaturesButton" class="global-settings__button">Export JSON</button>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div class="selection__container selection__container__noise-threshold noise-threshold-container">
+                    <label for="thresholdToggle">Draw Lines Above Noise Threshold:</label>
+                    <input type="checkbox" id="thresholdToggle">
+                    <label for="thresholdSlider">Zero Crossing Rate Threshold:</label>
+                    <input type="range" id="thresholdSlider" min="0" max="45" step="1" value="40">    
+                </div>
+            </div>
