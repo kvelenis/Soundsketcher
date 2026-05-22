@@ -1454,6 +1454,25 @@ server:
 result: public deployment smoke -> ok
 ```
 
+### 2026-05-22 (Experiments hub polish)
+
+**What changed:**
+
+- Polished `/experiments` into a clearer research hub instead of a simple link list.
+- Added richer experiment summaries:
+  - Indefinite-Pitch Sounds: listener count, stimulus count, sine adjustment task, and research question.
+  - Noise-Tonal Preference: stimulus pair count, real renderer note, preference-task framing, and research question.
+- Added a "Research Context" section linking to:
+  - JASA EL paper DOI
+  - main SoundSketcher app
+  - legacy `/app1/`
+  - project website
+- Added `#results` anchor to the indefinite-pitch result figures section so the experiments hub can deep-link directly to figures.
+
+**Deployment note:**
+
+- This is a template-only change. Syncing the HTML files is enough; restart only if the running service does not pick up updated templates.
+
 ```text
 local with bundled Node:
 PATH=/Users/konstantinosvelenis/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH \
