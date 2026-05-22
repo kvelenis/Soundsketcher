@@ -1,8 +1,11 @@
+import os
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.core.config import get_settings
 from app.core.templates import get_templates
-from app.core.templates import app_path
+from app.core.templates import app_base_path, app_path
 
 
 router = APIRouter(tags=["pages"])
@@ -38,6 +41,45 @@ PAGE_ROUTES = {
 @router.get("/healthz")
 async def healthz():
     return {"status": "ok"}
+
+
+def _path_check(path, *, expect_file: bool = False, writable: bool = False) -> dict:
+    exists = path.exists()
+    is_expected_type = path.is_file() if expect_file else path.is_dir()
+    result = {
+        "exists": exists,
+        "ok": exists and is_expected_type,
+    }
+    if writable:
+        result["writable"] = exists and path.is_dir() and os.access(path, os.W_OK)
+        result["ok"] = result["ok"] and result["writable"]
+    return result
+
+
+@router.get("/deployment-info")
+async def deployment_info(request: Request):
+    settings = get_settings()
+    checks = {
+        "templates": _path_check(settings.templates_dir),
+        "static": _path_check(settings.static_dir),
+        "sandbox_static": _path_check(settings.sandbox_static_dir),
+        "cache_root": _path_check(settings.cache_root, writable=True),
+        "main_module": _path_check(
+            settings.sandbox_static_dir / "js" / "main.module.mjs",
+            expect_file=True,
+        ),
+        "app_css": _path_check(
+            settings.sandbox_static_dir / "css" / "app-chrome.css",
+            expect_file=True,
+        ),
+    }
+    status = "ok" if all(check["ok"] for check in checks.values()) else "degraded"
+    return {
+        "status": status,
+        "app": settings.app_name,
+        "base_path": app_base_path(request) or settings.base_path,
+        "checks": checks,
+    }
 
 
 @router.get("/favicon.ico", include_in_schema=False)

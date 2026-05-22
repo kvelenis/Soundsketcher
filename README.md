@@ -127,6 +127,11 @@ npm run qa:public-smoke
 
 Browser QA uses Playwright and requires Node 18 or newer.
 
+Health/deployment endpoints:
+
+- `/healthz`
+- `/deployment-info`
+
 ## Notes For Contributors
 
 - Do not commit runtime data, uploads, cached audio, or real environment files.

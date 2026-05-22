@@ -47,6 +47,9 @@ curl -s -o /dev/null -w "experiments %{http_code} %{content_type}\n" \
 
 curl -s -o /dev/null -w "legacy %{http_code} %{content_type}\n" \
   https://helen.mus.auth.gr/app1/
+
+curl -s https://helen.mus.auth.gr/soundsketcher/healthz
+curl -s https://helen.mus.auth.gr/soundsketcher/deployment-info
 ```
 
 Expected:
@@ -54,6 +57,8 @@ Expected:
 - `/soundsketcher/` returns `200`
 - `/soundsketcher/experiments` returns `200`
 - `/app1/` still returns `200`, `301`, or `302`
+- `/healthz` returns `{"status":"ok"}`
+- `/deployment-info` returns `status: ok`
 
 ## 5. Static MIME Checks
 

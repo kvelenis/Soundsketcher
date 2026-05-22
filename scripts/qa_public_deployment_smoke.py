@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import ssl
 import sys
 import urllib.error
@@ -52,6 +53,16 @@ def assert_content_type(
         )
 
 
+def get_json(base_url: str, path: str, *, insecure: bool = False) -> dict:
+    url = f"{base_url.rstrip('/')}{path}"
+    context = ssl._create_unverified_context() if insecure else None
+    with urllib.request.urlopen(url, timeout=15, context=context) as response:
+        body = response.read().decode("utf-8")
+        if response.status != 200:
+            raise AssertionError(f"{path} returned {response.status}, expected 200")
+        return json.loads(body)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="https://helen.mus.auth.gr/soundsketcher")
@@ -66,6 +77,17 @@ def main() -> int:
         "/noise_tonal_preference",
     ):
         assert_content_type(args.base_url, path, "text/html", insecure=args.insecure)
+
+    health = get_json(args.base_url, "/healthz", insecure=args.insecure)
+    if health.get("status") != "ok":
+        raise AssertionError(f"/healthz returned unexpected payload: {health}")
+
+    deployment = get_json(args.base_url, "/deployment-info", insecure=args.insecure)
+    if deployment.get("status") != "ok":
+        raise AssertionError(f"/deployment-info returned unexpected payload: {deployment}")
+    base_path = deployment.get("base_path")
+    if base_path not in {"", "/soundsketcher"}:
+        raise AssertionError(f"/deployment-info returned unexpected base_path: {deployment}")
 
     assert_content_type(
         args.base_url,

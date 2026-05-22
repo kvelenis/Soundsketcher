@@ -1480,3 +1480,52 @@ result: noise-tonal preference showcase -> ok
 - Codex bundled Node worked:
   - `/Users/konstantinosvelenis/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`
 - Local Python needed `--insecure` because its certificate store could not verify the `helen.mus.auth.gr` HTTPS chain.
+
+### 2026-05-22 (Deployment health endpoint)
+
+**What changed:**
+
+- Kept `/healthz` as the minimal liveness endpoint:
+  - returns `{"status": "ok"}`
+- Added `/deployment-info` as a public deployment sanity endpoint:
+  - reports app name
+  - reports effective base path (`/soundsketcher` in production)
+  - checks configured template/static directories
+  - checks sandbox static JS/CSS files
+  - checks cache root existence and writability
+  - returns `status: ok` only when all checks pass
+- Added `/healthz` and `/deployment-info` to:
+  - `scripts/qa_public_deployment_smoke.py`
+  - `deploy/CHECKLIST.md`
+  - `README.md`
+
+**Validation before sync:**
+
+```text
+python3 -m py_compile app/api/pages.py scripts/qa_public_deployment_smoke.py
+result: ok
+```
+
+**Deployment note:**
+
+- This endpoint change needs `sudo systemctl restart soundsketcher-refactor` after syncing because it changes Python route code.
+
+**Post-restart validation:**
+
+```text
+https://helen.mus.auth.gr/soundsketcher/healthz
+-> {"status":"ok"}
+
+https://helen.mus.auth.gr/soundsketcher/deployment-info
+-> status: ok
+-> base_path: /soundsketcher
+-> templates/static/sandbox_static/cache_root/main_module/app_css checks: ok
+
+server:
+/mnt/ssd1/kvelenis/conda-envs/soundsketcher-staging/bin/python \
+  scripts/qa_public_deployment_smoke.py \
+  --base-url https://helen.mus.auth.gr/soundsketcher \
+  --legacy-url https://helen.mus.auth.gr/app1
+
+result: public deployment smoke -> ok
+```
